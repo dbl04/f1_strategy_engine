@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 Pit Stop Strategy Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0e14;
+      --panel-bg: rgba(22, 27, 38, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --accent-f1: #e10600;
+      --accent-cyan: #00f2fe;
+      --accent-gold: #ffb703;
+      --text-main: #f0f4f8;
+      --text-muted: #8a99ad;
+      
+      --compound-soft: #ff2a2a;
+      --compound-medium: #ffd100;
+      --compound-hard: #ffffff;
+      --compound-inter: #39b54a;
+      --compound-wet: #00a0e9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(225, 6, 0, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(0, 242, 254, 0.05) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto 2rem auto;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      background: linear-gradient(135deg, var(--accent-f1), #ff5252);
+      color: white;
+      font-weight: 900;
+      font-size: 1.25rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      letter-spacing: 1px;
+      box-shadow: 0 0 15px rgba(225, 6, 0, 0.4);
+    }
+
+    .brand-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(57, 181, 74, 0.1);
+      border: 1px solid rgba(57, 181, 74, 0.3);
+      color: #39b54a;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #39b54a;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #39b54a;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+    }
+
+    .panel-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-main);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control, select {
+      width: 100%;
+      background: rgba(10, 14, 22, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+    }
+
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      background: rgba(10, 14, 22, 0.4);
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-f1);
+      cursor: pointer;
+    }
+
+    .preset-container {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-preset {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+      padding: 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-preset:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-f1), #b30500);
+      color: white;
+      border: none;
+      padding: 1rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(225, 6, 0, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(225, 6, 0, 0.6);
+    }
+
+    /* Optimal Card Styling */
+    .optimal-card {
+      background: linear-gradient(135deg, rgba(255, 183, 3, 0.08) 0%, rgba(22, 27, 38, 0.9) 100%);
+      border: 2px solid var(--accent-gold);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 25px rgba(255, 183, 3, 0.15);
+    }
+
+    .optimal-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: var(--accent-gold);
+      color: #000;
+      font-weight: 900;
+      font-size: 0.75rem;
+      padding: 0.4rem 1rem;
+      border-bottom-left-radius: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .strategy-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-box {
+      background: rgba(10, 14, 22, 0.6);
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .metric-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--accent-cyan);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    /* Timeline Bar */
+    .timeline-container {
+      margin: 1.5rem 0;
+    }
+
+    .timeline-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .timeline-bar {
+      display: flex;
+      height: 32px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      background: #111;
+    }
+
+    .stint-segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #000;
+      position: relative;
+      transition: width 0.5s ease;
+    }
+
+    .stint-Soft { background: var(--compound-soft); color: white; }
+    .stint-Medium { background: var(--compound-medium); color: black; }
+    .stint-Hard { background: var(--compound-hard); color: black; }
+    .stint-Intermediate { background: var(--compound-inter); color: white; }
+    .stint-Wet { background: var(--compound-wet); color: white; }
+
+    .pit-marker {
+      width: 14px;
+      background: #ff0055;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .reasons-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .reason-tag {
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      color: var(--accent-cyan);
+      font-size: 0.75rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .reason-tag.warning {
+      background: rgba(225, 6, 0, 0.15);
+      border-color: rgba(225, 6, 0, 0.4);
+      color: #ff5252;
+    }
+
+    /* Alternatives List */
+    .alt-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .alt-card {
+      background: rgba(22, 27, 38, 0.5);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: border-color 0.2s;
+    }
+
+    .alt-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .alt-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .alt-title {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .alt-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .alt-delta {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .sc-banner {
+      background: linear-gradient(90deg, #ff9100, #e10600);
+      color: white;
+      font-weight: 700;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 15px rgba(255, 145, 0, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.9; }
+      50% { opacity: 1; filter: brightness(1.2); }
+      100% { opacity: 0.9; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">F1</div>
+      <div>
+        <div class="brand-title">Strategy Engine Simulator</div>
+        <div class="brand-subtitle">Axum & Serde Real-Time Telemetry & Pit Optimizer</div>
+      </div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      Engine Online (Port 3000)
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Input Panel -->
+    <div class="panel">
+      <div class="panel-title">⚙️ Race Telemetry Inputs</div>
+
+      <div class="preset-container">
+        <button class="btn-preset" onclick="loadPreset('monza')">🏎️ Monza 53L</button>
+        <button class="btn-preset" onclick="loadPreset('sc')">🚨 SC Box Now</button>
+        <button class="btn-preset" onclick="loadPreset('wing')">🛠️ Wing Repair</button>
+      </div>
+
+      <form id="strategy-form" onsubmit="runSimulation(event)">
+        <div class="form-group">
+          <div class="form-label">
+            <span>Total Laps</span>
+            <span id="val-total-laps">57</span>
+          </div>
+          <input type="range" id="total_laps" min="20" max="78" value="57" class="form-control" oninput="updateVal('total-laps', this.value)">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Current Lap</span>
+            <span id="val-current-lap">10</span>
+          </div>
+          <input type="range" id="current_lap" min="0" max="75" value="10" class="form-control" oninput="updateVal('current-lap', this.value)">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Current Tire Compound</span>
+          </div>
+          <select id="current_tire">
+            <option value="Soft" selected>Soft (Red)</option>
+            <option value="Medium">Medium (Yellow)</option>
+            <option value="Hard">Hard (White)</option>
+            <option value="Intermediate">Intermediate (Green)</option>
+            <option value="Wet">Wet (Blue)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Current Tire Age (Laps)</span>
+            <span id="val-tire-age">10</span>
+          </div>
+          <input type="range" id="tire_age_laps" min="0" max="40" value="10" class="form-control" oninput="updateVal('tire-age', this.value)">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Track Status</span>
+          </div>
+          <select id="environment">
+            <option value="Green" selected>Green Flag (Normal)</option>
+            <option value="Yellow">Yellow Flag</option>
+            <option value="SafetyCar">Safety Car (SC Box Discount)</option>
+            <option value="VirtualSafetyCar">Virtual Safety Car (VSC)</option>
+            <option value="RedFlag">Red Flag</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Base Pit Loss (Seconds)</span>
+          </div>
+          <input type="number" id="base_pit_stop_loss_seconds" value="22.5" step="0.5" class="form-control">
+        </div>
+
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="mandatory_pit_completed">
+            <span>Mandatory Pit Stop Already Completed</span>
+          </label>
+
+          <label class="checkbox-item">
+            <input type="checkbox" id="front_wing_damage">
+            <span>Front Wing Damage (+10.0s Repair)</span>
+          </label>
+
+          <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0;">
+            <div class="form-label">
+              <span>Time Penalty (Seconds)</span>
+            </div>
+            <input type="number" id="time_penalty_seconds" value="0.0" step="5.0" min="0" class="form-control">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Simulate Strategy ⚡</button>
+      </form>
+    </div>
+
+    <!-- Right Results Panel -->
+    <div class="panel">
+      <div class="panel-title">📊 Optimal Strategy Analytics</div>
+
+      <div id="sc-banner-container"></div>
+
+      <div id="results-container">
+        <p style="color: var(--text-muted);">Click <strong>Simulate Strategy</strong> to calculate optimal pit stops.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function updateVal(id, val) {
+      document.getElementById('val-' + id).innerText = val;
+    }
+
+    function loadPreset(name) {
+      if (name === 'monza') {
+        document.getElementById('total_laps').value = 53;
+        document.getElementById('current_lap').value = 12;
+        document.getElementById('current_tire').value = 'Soft';
+        document.getElementById('tire_age_laps').value = 12;
+        document.getElementById('environment').value = 'Green';
+        document.getElementById('mandatory_pit_completed').checked = false;
+        document.getElementById('front_wing_damage').checked = false;
+        document.getElementById('time_penalty_seconds').value = 0;
+      } else if (name === 'sc') {
+        document.getElementById('total_laps').value = 57;
+        document.getElementById('current_lap').value = 15;
+        document.getElementById('current_tire').value = 'Soft';
+        document.getElementById('tire_age_laps').value = 15;
+        document.getElementById('environment').value = 'SafetyCar';
+        document.getElementById('mandatory_pit_completed').checked = false;
+        document.getElementById('front_wing_damage').checked = false;
+        document.getElementById('time_penalty_seconds').value = 0;
+      } else if (name === 'wing') {
+        document.getElementById('total_laps').value = 57;
+        document.getElementById('current_lap').value = 8;
+        document.getElementById('current_tire').value = 'Soft';
+        document.getElementById('tire_age_laps').value = 8;
+        document.getElementById('environment').value = 'Green';
+        document.getElementById('mandatory_pit_completed').checked = false;
+        document.getElementById('front_wing_damage').checked = true;
+        document.getElementById('time_penalty_seconds').value = 5;
+      }
+
+      updateVal('total-laps', document.getElementById('total_laps').value);
+      updateVal('current-lap', document.getElementById('current_lap').value);
+      updateVal('tire-age', document.getElementById('tire_age_laps').value);
+
+      runSimulation(new Event('submit'));
+    }
+
+    async function runSimulation(e) {
+      if (e) e.preventDefault();
+
+      const payload = {
+        track: {
+          total_laps: parseInt(document.getElementById('total_laps').value),
+          base_pit_stop_loss_seconds: parseFloat(document.getElementById('base_pit_stop_loss_seconds').value)
+        },
+        environment: document.getElementById('environment').value,
+        ego_car: {
+          current_lap: parseInt(document.getElementById('current_lap').value),
+          current_tire: document.getElementById('current_tire').value,
+          tire_age_laps: parseInt(document.getElementById('tire_age_laps').value),
+          mandatory_pit_completed: document.getElementById('mandatory_pit_completed').checked,
+          front_wing_damage: document.getElementById('front_wing_damage').checked,
+          time_penalty_seconds: parseFloat(document.getElementById('time_penalty_seconds').value)
+        }
+      };
+
+      try {
+        const res = await fetch('/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        renderResults(data, payload);
+      } catch (err) {
+        document.getElementById('results-container').innerHTML = `
+          <div style="color: #ff5252; font-weight: bold;">Error connecting to Strategy Engine API. Make sure 'cargo run' is active.</div>
+        `;
+      }
+    }
+
+    function renderResults(data, requestPayload) {
+      const scContainer = document.getElementById('sc-banner-container');
+      if (data.safety_car_advantage_active) {
+        scContainer.innerHTML = `
+          <div class="sc-banner">
+            🚨 SAFETY CAR / VSC ACTIVE: Cheap pit stop opportunity detected! (~30-40% reduced pit time loss)
+          </div>
+        `;
+      } else {
+        scContainer.innerHTML = '';
+      }
+
+      const opt = data.optimal_strategy;
+      const totalLaps = requestPayload.track.total_laps;
+      const currentLap = requestPayload.ego_car.current_lap;
+      const lapsRemaining = totalLaps - currentLap;
+
+      // Render Optimal Card
+      let html = `
+        <div class="optimal-card">
+          <div class="optimal-badge">OPTIMAL STRATEGY</div>
+          <div class="strategy-name">${opt.name}</div>
+
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <div class="metric-value">${opt.projected_total_time_formatted}</div>
+              <div class="metric-label">Projected Race Time</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-value">${opt.average_lap_time_seconds.toFixed(2)}s</div>
+              <div class="metric-label">Avg Lap Time</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-value">${opt.total_degradation_loss_seconds.toFixed(1)}s</div>
+              <div class="metric-label">Tire Deg Loss</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-value">${opt.total_pit_stop_time_loss_seconds.toFixed(1)}s</div>
+              <div class="metric-label">Total Pit Loss</div>
+            </div>
+          </div>
+
+          <!-- Stint Timeline -->
+          <div class="timeline-container">
+            <div class="timeline-title">STINT & PIT STOP TIMELINE (LAPS ${currentLap} ➔ ${totalLaps})</div>
+            <div class="timeline-bar">
+      `;
+
+      if (opt.pit_stops.length === 0) {
+        html += `<div class="stint-segment stint-${requestPayload.ego_car.current_tire}" style="width: 100%;">
+          ${requestPayload.ego_car.current_tire} (${lapsRemaining} Laps)
+        </div>`;
+      } else {
+        let prevLap = currentLap;
+        let currCompound = requestPayload.ego_car.current_tire;
+
+        opt.pit_stops.forEach((pit, idx) => {
+          let stintLaps = pit.pit_lap - prevLap;
+          let widthPct = (stintLaps / lapsRemaining) * 100;
+          html += `<div class="stint-segment stint-${currCompound}" style="width: ${widthPct}%;">
+            ${currCompound} (${stintLaps}L)
+          </div>`;
+          html += `<div class="pit-marker" title="Pit Stop at Lap ${pit.pit_lap}">P</div>`;
+          prevLap = pit.pit_lap;
+          currCompound = pit.new_compound;
+        });
+
+        let finalStintLaps = totalLaps - prevLap;
+        let finalWidthPct = (finalStintLaps / lapsRemaining) * 100;
+        html += `<div class="stint-segment stint-${currCompound}" style="width: ${finalWidthPct}%;">
+          ${currCompound} (${finalStintLaps}L)
+        </div>`;
+      }
+
+      html += `
+            </div>
+          </div>
+
+          <!-- Pit Reasons -->
+          <div class="reasons-list">
+      `;
+
+      opt.pit_stops.forEach(pit => {
+        pit.reasons.forEach(r => {
+          const isWarn = r.includes('wing') || r.includes('penalty');
+          html += `<div class="reason-tag ${isWarn ? 'warning' : ''}">📍 Lap ${pit.pit_lap}: ${r}</div>`;
+        });
+      });
+
+      html += `
+          </div>
+        </div>
+
+        <div class="panel-title" style="margin-top: 2rem;">⚡ Alternative Strategies Comparison</div>
+        <div class="alt-list">
+      `;
+
+      data.alternative_strategies.forEach(alt => {
+        html += `
+          <div class="alt-card">
+            <div class="alt-info">
+              <div class="alt-title">${alt.name}</div>
+              <div class="alt-sub">${alt.total_pit_stops} Pit Stop(s) • Total: ${alt.projected_total_time_formatted} • Pit Loss: ${alt.total_pit_stop_time_loss_seconds}s</div>
+            </div>
+            <div class="alt-delta">+${alt.delta_to_optimal_seconds.toFixed(1)}s</div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      document.getElementById('results-container').innerHTML = html;
+    }
+
+    // Run initial simulation on load
+    runSimulation(null);
+  </script>
+</body>
+</html>

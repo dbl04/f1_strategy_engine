@@ -1,11 +1,17 @@
 use axum::{
-    routing::post,
+    routing::{get, post},
+    response::Html,
     Router,
     Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+
+// Serve the interactive F1 Strategy Engine Dashboard UI at GET /
+async fn index_handler() -> Html<&'static str> {
+    Html(include_str!("index.html"))
+}
 
 // This enum defines the possible tire compounds in F1.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
@@ -223,9 +229,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
 
     let mut evaluated_strategies: Vec<StrategyOption> = Vec::new();
 
-    // -------------------------------------------------------------
-    // 1. Evaluate 0-Stop Strategy (Stint to end on current tire)
-    // -------------------------------------------------------------
+    // 1. Evaluate 0-Stop Strategy
     let (time_0stop, deg_0stop) = simulate_stint(
         current_lap,
         total_laps,
@@ -249,9 +253,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         delta_to_optimal_seconds: 0.0,
     });
 
-    // -------------------------------------------------------------
-    // 2. Evaluate 1-Stop Strategies (Sweep candidate pit laps)
-    // -------------------------------------------------------------
+    // 2. Evaluate 1-Stop Strategies
     let pit_step = if laps_remaining > 30 { 2 } else { 1 };
 
     for pit_lap in (current_lap + 1..total_laps).step_by(pit_step) {
@@ -310,9 +312,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         }
     }
 
-    // -------------------------------------------------------------
-    // 3. Evaluate 2-Stop Strategies (Key window samples)
-    // -------------------------------------------------------------
+    // 3. Evaluate 2-Stop Strategies
     if laps_remaining >= 15 {
         let p1_lap = current_lap + (laps_remaining / 3);
         let p2_lap = current_lap + (2 * laps_remaining / 3);
@@ -326,7 +326,6 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
                 p1_lap == current_lap + 1,
             );
 
-            // Second pit stop doesn't carry wing damage or penalty (already repaired/served)
             let (pit2_loss, pit2_reasons) = calculate_pit_stop_loss(
                 state.track.base_pit_stop_loss_seconds,
                 &TrackStatus::Green,
@@ -376,7 +375,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         }
     }
 
-    // Sort strategies: valid strategies first, then by lowest projected time
+    // Sort strategies: valid strategies first, then lowest total projected time
     evaluated_strategies.sort_by(|a, b| {
         match (a.is_valid_f1_rules, b.is_valid_f1_rules) {
             (true, false) => std::cmp::Ordering::Less,
@@ -390,7 +389,6 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
     let optimal = evaluated_strategies[0].clone();
     let min_time = optimal.projected_total_time_seconds;
 
-    // Calculate deltas and extract top alternative strategies
     let mut alternatives: Vec<StrategyOption> = Vec::new();
     for strat in evaluated_strategies.into_iter().skip(1).take(5) {
         let mut alt = strat;
@@ -440,6 +438,7 @@ struct ApiDoc;
 #[tokio::main]
 async fn main() {
     let app = Router::new()
+        .route("/", get(index_handler))
         .route("/simulate", post(simulate_race));
 
     let app = app.merge(
