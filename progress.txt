@@ -4,3 +4,4 @@
 - Completed Phase 1: Unit Tests
 - Completed Phase 2: Traffic Model Data Structures
 - Completed Phase 2: Dirty Air Time Loss
+- Completed Phase 2: Undercut / Overcut Calculator

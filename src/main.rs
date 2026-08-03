@@ -255,6 +255,16 @@ pub struct StrategyOption {
     pub delta_to_optimal_seconds: f64,
 }
 
+// Undercut / Overcut Option
+#[derive(Serialize, Debug, Clone, utoipa::ToSchema)]
+pub struct UndercutOvercutOption {
+    pub competitor_name: String,
+    pub target_pit_lap: u32,
+    pub pit_lap_delta: i32,
+    pub ego_pit_lap: u32,
+    pub advantage_seconds: f64,
+}
+
 // Strategy response.
 #[derive(Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct MultiStrategyResponse {
@@ -262,6 +272,8 @@ pub struct MultiStrategyResponse {
     pub alternative_strategies: Vec<StrategyOption>,
     pub safety_car_advantage_active: bool,
     pub summary_message: String,
+    #[serde(default)]
+    pub undercut_overcut_options: Vec<UndercutOvercutOption>,
 }
 
 fn format_duration(seconds: f64) -> String {
@@ -426,6 +438,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
             alternative_strategies: vec![],
             safety_car_advantage_active: sc_active,
             summary_message: "Race completed. No laps remaining to simulate.".to_string(),
+            undercut_overcut_options: vec![],
         };
     }
 
@@ -612,11 +625,51 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         laps_remaining
     );
 
+    let mut undercut_overcut_options = Vec::new();
+    let candidate_new_compound = match state.ego_car.current_tire {
+        TireCompound::Soft => TireCompound::Medium,
+        TireCompound::Medium => TireCompound::Hard,
+        TireCompound::Hard => TireCompound::Medium,
+        TireCompound::Intermediate => TireCompound::Wet,
+        TireCompound::Wet => TireCompound::Intermediate,
+    };
+
+    for comp in &state.competitors {
+        let target_lap = comp.projected_pit_lap;
+        if target_lap <= current_lap || target_lap >= total_laps {
+            continue;
+        }
+
+        let baseline_s1 = simulate_stint(current_lap, target_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors).0;
+        let baseline_s2 = simulate_stint(target_lap, total_laps, &candidate_new_compound, 0, &state.environment, &state.competitors).0;
+        let baseline_total = baseline_s1 + baseline_s2;
+
+        for delta in [-3, -2, -1, 1, 2, 3] {
+            let ego_pit_lap = (target_lap as i32 + delta) as u32;
+            if ego_pit_lap > current_lap && ego_pit_lap < total_laps {
+                let s1 = simulate_stint(current_lap, ego_pit_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors).0;
+                let s2 = simulate_stint(ego_pit_lap, total_laps, &candidate_new_compound, 0, &state.environment, &state.competitors).0;
+                let total = s1 + s2;
+                
+                let advantage = baseline_total - total; // positive means faster
+
+                undercut_overcut_options.push(UndercutOvercutOption {
+                    competitor_name: comp.driver_name.clone(),
+                    target_pit_lap: target_lap,
+                    pit_lap_delta: delta,
+                    ego_pit_lap,
+                    advantage_seconds: (advantage * 100.0).round() / 100.0,
+                });
+            }
+        }
+    }
+
     MultiStrategyResponse {
         optimal_strategy: optimal,
         alternative_strategies: alternatives,
         safety_car_advantage_active: sc_active,
         summary_message: summary,
+        undercut_overcut_options,
     }
 }
 
@@ -637,7 +690,7 @@ async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategyResp
 #[derive(OpenApi)]
 #[openapi(
     paths(simulate_race, get_tracks, get_circuit_geometry),
-    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, MultiStrategyResponse, CircuitInfo)),
+    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, UndercutOvercutOption, MultiStrategyResponse, CircuitInfo)),
     tags(
         (name = "F1 Strategy Engine", description = "API for simulating multi-stop race strategies")
     )
