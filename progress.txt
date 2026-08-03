@@ -1,2 +1,3 @@
 - Completed Phase 1: Non-Linear Tyre Degradation
 - Completed Phase 1: Fuel Load Weight Effect
+- Completed Phase 1: Track Evolution Rubbering
