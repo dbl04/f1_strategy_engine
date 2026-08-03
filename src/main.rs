@@ -353,12 +353,14 @@ fn simulate_stint(
     let mut total_deg_loss = 0.0;
     let mut age = initial_tire_age;
 
-    for _ in start_lap..end_lap {
+    for lap in start_lap..end_lap {
         let deg = get_degradation_factor(compound, age);
+        let fuel_effect = (lap as f64) * -0.03;
+        
         let lap_time = match environment {
             TrackStatus::RedFlag => 0.0,
-            TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0,
-            TrackStatus::Green | TrackStatus::Yellow => 90.0 + deg,
+            TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0 + fuel_effect,
+            TrackStatus::Green | TrackStatus::Yellow => 90.0 + deg + fuel_effect,
         };
 
         if *environment != TrackStatus::RedFlag {
