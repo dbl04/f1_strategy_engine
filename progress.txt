@@ -7,3 +7,4 @@
 - Completed Phase 2: Undercut / Overcut Calculator
 - Completed Phase 2: Pit Exit Traffic Window Release
 - Completed Phase 3: Dynamic Weather Transitions
+- Completed Phase 3: Monte Carlo SC Risk Assessor

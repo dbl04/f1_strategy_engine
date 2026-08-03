@@ -25,6 +25,7 @@ pub struct CircuitInfo {
     pub base_pit_stop_loss_seconds: f64,
     pub length_km: f64,
     pub osm_query_name: String,
+    pub historical_sc_probability: f64,
 }
 
 /// Get list of available F1 circuits and telemetry data.
@@ -46,6 +47,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 25.0,
             length_km: 5.793,
             osm_query_name: "Autodromo Nazionale Monza".to_string(),
+            historical_sc_probability: 0.25,
         },
         CircuitInfo {
             id: "silverstone".to_string(),
@@ -56,6 +58,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 20.5,
             length_km: 5.891,
             osm_query_name: "Silverstone Circuit".to_string(),
+            historical_sc_probability: 0.30,
         },
         CircuitInfo {
             id: "spa".to_string(),
@@ -66,6 +69,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 22.0,
             length_km: 7.004,
             osm_query_name: "Circuit de Spa-Francorchamps".to_string(),
+            historical_sc_probability: 0.50,
         },
         CircuitInfo {
             id: "monaco".to_string(),
@@ -76,6 +80,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 19.5,
             length_km: 3.337,
             osm_query_name: "Circuit de Monaco".to_string(),
+            historical_sc_probability: 0.80,
         },
         CircuitInfo {
             id: "bahrain".to_string(),
@@ -86,6 +91,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 22.5,
             length_km: 5.412,
             osm_query_name: "Bahrain International Circuit".to_string(),
+            historical_sc_probability: 0.35,
         },
         CircuitInfo {
             id: "suzuka".to_string(),
@@ -96,6 +102,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 22.5,
             length_km: 5.807,
             osm_query_name: "Suzuka Circuit".to_string(),
+            historical_sc_probability: 0.40,
         },
         CircuitInfo {
             id: "cota".to_string(),
@@ -106,6 +113,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 20.0,
             length_km: 5.513,
             osm_query_name: "Circuit of the Americas".to_string(),
+            historical_sc_probability: 0.30,
         },
         CircuitInfo {
             id: "singapore".to_string(),
@@ -116,6 +124,7 @@ async fn get_tracks() -> Json<Vec<CircuitInfo>> {
             base_pit_stop_loss_seconds: 28.0,
             length_km: 4.940,
             osm_query_name: "Marina Bay Street Circuit".to_string(),
+            historical_sc_probability: 1.0,
         },
     ];
 
@@ -196,6 +205,8 @@ pub enum TrackStatus {
 pub struct TrackParameters {
     pub total_laps: u32,
     pub base_pit_stop_loss_seconds: f64,
+    #[serde(default)]
+    pub historical_sc_probability: f64,
 }
 
 // Ego car state.
@@ -294,6 +305,8 @@ pub struct MultiStrategyResponse {
     pub undercut_overcut_options: Vec<UndercutOvercutOption>,
     #[serde(default)]
     pub traffic_windows: Vec<TrafficWindowResponse>,
+    #[serde(default)]
+    pub safety_car_probability_per_lap: f64,
 }
 
 // Traffic Window Option
@@ -508,6 +521,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
             summary_message: "Race completed. No laps remaining to simulate.".to_string(),
             undercut_overcut_options: vec![],
             traffic_windows: vec![],
+            safety_car_probability_per_lap: 0.0,
         };
     }
 
@@ -769,6 +783,12 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         });
     }
 
+    let sc_prob_per_lap = if total_laps > 0 {
+        state.track.historical_sc_probability / (total_laps as f64)
+    } else {
+        0.0
+    };
+
     MultiStrategyResponse {
         optimal_strategy: optimal,
         alternative_strategies: alternatives,
@@ -776,6 +796,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         summary_message: summary,
         undercut_overcut_options,
         traffic_windows,
+        safety_car_probability_per_lap: sc_prob_per_lap,
     }
 }
 
@@ -858,6 +879,7 @@ mod tests {
             track: TrackParameters {
                 total_laps: 50,
                 base_pit_stop_loss_seconds: 20.0,
+                historical_sc_probability: 0.0,
             },
             environment: TrackStatus::Green,
             ego_car: EgoCar {
@@ -882,6 +904,7 @@ mod tests {
             track: TrackParameters {
                 total_laps: 50,
                 base_pit_stop_loss_seconds: 20.0,
+                historical_sc_probability: 0.0,
             },
             environment: TrackStatus::Green,
             ego_car: EgoCar {

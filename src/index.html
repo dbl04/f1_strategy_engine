@@ -3,137 +3,279 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>F1 Pit Stop Strategy Engine</title>
+  <title>F1 PIT STRATEGY ENGINE | Official Broadcast Graphics & Telemetry</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,700;1,900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
   <style>
+    @font-face {
+      font-family: 'F1 Torque';
+      src: local('Titillium Web Black Italic'), local('TitilliumWeb-BlackItalic');
+      font-weight: 900;
+      font-style: italic;
+    }
+    @font-face {
+      font-family: 'F1 Turbo';
+      src: local('Space Grotesk Bold'), local('SpaceGrotesk-Bold');
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: 'F1 Regular';
+      src: local('Titillium Web Regular'), local('TitilliumWeb-Regular');
+      font-weight: 400;
+    }
+
     :root {
-      --bg-dark: #0b0e14;
-      --panel-bg: rgba(22, 27, 38, 0.75);
-      --panel-border: rgba(255, 255, 255, 0.08);
-      --accent-f1: #e10600;
-      --accent-cyan: #00f2fe;
-      --accent-gold: #ffb703;
-      --text-main: #f0f4f8;
-      --text-muted: #8a99ad;
+      --f1-red: #e10600;
+      --f1-dark: #15151e;
+      --f1-panel-bg: rgba(26, 26, 36, 0.92);
+      --f1-border: rgba(255, 255, 255, 0.12);
+      --f1-purple: #b000ff;
+      --f1-green: #00e100;
+      --f1-yellow: #ffd100;
+      --f1-cyan: #00f2fe;
+      --f1-white: #ffffff;
       
       --compound-soft: #ff2a2a;
       --compound-medium: #ffd100;
       --compound-hard: #ffffff;
       --compound-inter: #39b54a;
       --compound-wet: #00a0e9;
+
+      --font-f1-torque: 'F1 Torque', 'Titillium Web', sans-serif;
+      --font-f1-turbo: 'F1 Turbo', 'Space Grotesk', sans-serif;
+      --font-f1-regular: 'F1 Regular', 'Titillium Web', sans-serif;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Outfit', sans-serif;
     }
 
     body {
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(circle at 15% 15%, rgba(225, 6, 0, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 85% 85%, rgba(0, 242, 254, 0.05) 0%, transparent 40%);
-      color: var(--text-main);
+      background-color: var(--f1-dark);
+      color: var(--f1-white);
+      font-family: var(--font-f1-regular);
       min-height: 100vh;
-      padding: 2rem;
+      overflow-x: hidden;
     }
 
+    .tv-skew { transform: skewX(-12deg); }
+    .tv-unskew { transform: skewX(12deg); display: inline-block; }
+
+    /* Header */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      max-width: 1400px;
-      margin: 0 auto 2rem auto;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--panel-border);
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.2rem 2rem;
+      border-bottom: 3px solid var(--f1-red);
+      background: rgba(21, 21, 30, 0.95);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 200;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1rem;
     }
 
     .brand-logo {
-      background: linear-gradient(135deg, var(--accent-f1), #ff5252);
+      background: var(--f1-red);
       color: white;
-      font-weight: 900;
-      font-size: 1.25rem;
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      letter-spacing: 1px;
-      box-shadow: 0 0 15px rgba(225, 6, 0, 0.4);
+      font-family: var(--font-f1-torque);
+      font-size: 1.8rem;
+      padding: 0.3rem 1.4rem;
+      box-shadow: -4px 0 0 white, 0 0 20px rgba(225, 6, 0, 0.7);
     }
 
     .brand-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+      font-family: var(--font-f1-torque);
+      font-size: 1.4rem;
+      text-transform: uppercase;
     }
 
-    .brand-subtitle {
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--f1-border);
+      color: var(--f1-white);
+      padding: 0.6rem 1.4rem;
+      font-family: var(--font-f1-torque);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-btn.active, .nav-btn:hover {
+      background: var(--f1-red);
+      border-color: var(--f1-red);
+      box-shadow: 0 0 15px rgba(225, 6, 0, 0.6);
+    }
+
+    /* Page Views */
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+
+    /* Landing Container */
+    .landing-container {
+      position: relative;
+      min-height: calc(100vh - 80px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 3rem 2rem;
+      overflow: hidden;
+    }
+
+    .landing-prism-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .landing-overlay {
+      position: relative;
+      z-index: 10;
+      max-width: 950px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.75rem;
+      background: rgba(15, 15, 23, 0.82);
+      backdrop-filter: blur(16px);
+      padding: 3.5rem 3rem;
+      border: 2px solid var(--f1-border);
+      border-top: 4px solid var(--f1-red);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    }
+
+    .landing-badge {
+      background: var(--f1-red);
+      color: white;
+      font-family: var(--font-f1-torque);
+      padding: 0.4rem 1.2rem;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+    }
+
+    .landing-title {
+      font-family: var(--font-f1-torque);
+      font-size: 3.8rem;
+      line-height: 1.05;
+      text-transform: uppercase;
+      text-shadow: 0 4px 30px rgba(0, 0, 0, 0.9);
+    }
+
+    .landing-title span {
+      color: var(--f1-red);
+      text-shadow: 0 0 25px rgba(225, 6, 0, 0.8);
+    }
+
+    .landing-desc {
+      font-size: 1.25rem;
+      color: #cfd8e3;
+      line-height: 1.6;
+      max-width: 800px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      width: 100%;
+      margin: 1rem 0;
+    }
+
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
+    }
+
+    .feature-card {
+      background: rgba(30, 30, 42, 0.8);
+      border: 1px solid var(--f1-border);
+      border-left: 3px solid var(--f1-cyan);
+      padding: 1.2rem;
+      text-align: left;
+    }
+
+    .feature-card h4 {
+      font-family: var(--font-f1-torque);
+      font-size: 1.1rem;
+      color: var(--f1-white);
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card p {
       font-size: 0.85rem;
       color: var(--text-muted);
     }
 
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(57, 181, 74, 0.1);
-      border: 1px solid rgba(57, 181, 74, 0.3);
-      color: #39b54a;
-      padding: 0.4rem 0.8rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
+    .btn-enter-simulator {
+      background: linear-gradient(135deg, var(--f1-red), #b30500);
+      color: white;
+      border: none;
+      padding: 1.25rem 3.5rem;
+      font-family: var(--font-f1-torque);
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 6px 30px rgba(225, 6, 0, 0.7);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #39b54a;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #39b54a;
+    .btn-enter-simulator:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 10px 40px rgba(225, 6, 0, 0.9);
     }
 
-    main {
+    /* Simulator Dashboard */
+    .simulator-container {
+      max-width: 1440px;
+      margin: 2rem auto;
+      padding: 0 2rem;
       display: grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: 460px 1fr;
       gap: 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
     }
 
     @media (max-width: 1024px) {
-      main {
-        grid-template-columns: 1fr;
-      }
+      .simulator-container { grid-template-columns: 1fr; }
     }
 
-    .panel {
-      background: var(--panel-bg);
+    .tv-card {
+      background: var(--f1-panel-bg);
       backdrop-filter: blur(12px);
-      border: 1px solid var(--panel-border);
-      border-radius: 16px;
+      border: 1px solid var(--f1-border);
+      border-left: 4px solid var(--f1-red);
       padding: 1.75rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
-    .panel-title {
-      font-size: 1.15rem;
-      font-weight: 700;
+    .tv-card-header {
+      font-family: var(--font-f1-torque);
+      font-size: 1.3rem;
+      text-transform: uppercase;
       margin-bottom: 1.25rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      color: var(--text-main);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--f1-border);
+      padding-bottom: 0.75rem;
     }
 
     .form-group {
@@ -143,191 +285,146 @@
     .form-label {
       display: flex;
       justify-content: space-between;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-family: var(--font-f1-turbo);
+      font-size: 0.9rem;
       color: var(--text-muted);
       margin-bottom: 0.5rem;
+      text-transform: uppercase;
     }
 
     .form-control, select {
       width: 100%;
-      background: rgba(10, 14, 22, 0.6);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      color: var(--text-main);
-      font-size: 0.95rem;
-      transition: all 0.2s ease;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid var(--f1-border);
+      color: var(--f1-white);
+      padding: 0.8rem 1rem;
+      font-family: var(--font-f1-turbo);
+      font-size: 1rem;
     }
 
     .form-control:focus, select:focus {
       outline: none;
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+      border-color: var(--f1-red);
+      box-shadow: 0 0 10px rgba(225, 6, 0, 0.4);
     }
 
-    .checkbox-group {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      background: rgba(10, 14, 22, 0.4);
-      padding: 1rem;
-      border-radius: 10px;
-      border: 1px solid var(--panel-border);
-    }
-
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .checkbox-item input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--accent-f1);
-      cursor: pointer;
-    }
-
-    .preset-container {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .btn-preset {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--panel-border);
-      color: var(--text-muted);
-      padding: 0.5rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-preset:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-main);
-    }
-
-    .btn-primary {
+    .btn-f1 {
       width: 100%;
-      background: linear-gradient(135deg, var(--accent-f1), #b30500);
+      background: var(--f1-red);
       color: white;
       border: none;
-      padding: 1rem;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 700;
+      padding: 1.1rem;
+      font-family: var(--font-f1-torque);
+      font-size: 1.3rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(225, 6, 0, 0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(225, 6, 0, 0.5);
+      transition: transform 0.2s, background 0.2s;
     }
 
-    .btn-primary:hover {
+    .btn-f1:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(225, 6, 0, 0.6);
+      background: #ff1a14;
     }
 
-    /* Optimal Card Styling */
-    .optimal-card {
-      background: linear-gradient(135deg, rgba(255, 183, 3, 0.08) 0%, rgba(22, 27, 38, 0.9) 100%);
-      border: 2px solid var(--accent-gold);
-      border-radius: 16px;
-      padding: 1.75rem;
-      margin-bottom: 2rem;
+    /* Diagrammatic Vector Telemetry Track Box */
+    .telemetry-track-box {
+      background: #07090e;
+      border: 2px solid var(--f1-border);
+      border-left: 4px solid var(--f1-cyan);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
       position: relative;
-      overflow: hidden;
-      box-shadow: 0 0 25px rgba(255, 183, 3, 0.15);
     }
 
-    .optimal-badge {
+    .track-legend {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.75rem;
+      font-family: var(--font-f1-turbo);
+      font-size: 0.85rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .legend-color {
+      width: 14px;
+      height: 6px;
+      border-radius: 2px;
+    }
+
+    .tv-broadcast-card {
+      background: linear-gradient(135deg, rgba(225, 6, 0, 0.18) 0%, rgba(21, 21, 30, 0.95) 100%);
+      border: 2px solid var(--f1-red);
+      padding: 1.75rem;
+      position: relative;
+      margin-bottom: 2rem;
+    }
+
+    .tv-box-banner {
       position: absolute;
       top: 0;
       right: 0;
-      background: var(--accent-gold);
-      color: #000;
-      font-weight: 900;
-      font-size: 0.75rem;
-      padding: 0.4rem 1rem;
-      border-bottom-left-radius: 12px;
-      letter-spacing: 1px;
+      background: var(--f1-red);
+      color: white;
+      font-family: var(--font-f1-torque);
+      padding: 0.5rem 1.5rem;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+    }
+
+    .tv-strategy-title {
+      font-family: var(--font-f1-torque);
+      font-size: 1.9rem;
+      margin-bottom: 1rem;
       text-transform: uppercase;
     }
 
-    .strategy-name {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      font-family: 'Space Grotesk', sans-serif;
-    }
-
-    .metrics-grid {
+    .tv-timing-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
 
-    .metric-box {
-      background: rgba(10, 14, 22, 0.6);
+    .tv-timing-box {
+      background: rgba(10, 10, 15, 0.9);
       padding: 1rem;
-      border-radius: 10px;
-      border: 1px solid var(--panel-border);
+      border-left: 4px solid var(--f1-cyan);
     }
 
-    .metric-value {
-      font-size: 1.35rem;
-      font-weight: 700;
-      font-family: 'Space Grotesk', sans-serif;
-      color: var(--accent-cyan);
+    .tv-timing-val {
+      font-family: var(--font-f1-turbo);
+      font-size: 1.6rem;
+      color: var(--f1-white);
     }
 
-    .metric-label {
+    .tv-timing-lbl {
+      font-family: var(--font-f1-turbo);
       font-size: 0.75rem;
       color: var(--text-muted);
       text-transform: uppercase;
-      margin-top: 0.25rem;
     }
 
-    /* Timeline Bar */
-    .timeline-container {
-      margin: 1.5rem 0;
-    }
-
-    .timeline-title {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-    }
-
-    .timeline-bar {
+    .stint-bar-wrap {
       display: flex;
-      height: 32px;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--panel-border);
-      background: #111;
+      height: 38px;
+      border: 2px solid black;
+      background: #000;
+      margin-top: 1rem;
     }
 
-    .stint-segment {
+    .stint-bar-seg {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-family: var(--font-f1-torque);
+      font-size: 0.9rem;
       color: #000;
-      position: relative;
-      transition: width 0.5s ease;
     }
 
     .stint-Soft { background: var(--compound-soft); color: white; }
@@ -336,274 +433,725 @@
     .stint-Intermediate { background: var(--compound-inter); color: white; }
     .stint-Wet { background: var(--compound-wet); color: white; }
 
-    .pit-marker {
-      width: 14px;
-      background: #ff0055;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .pit-tag {
+      background: var(--f1-red);
       color: white;
-      font-size: 10px;
-      font-weight: bold;
-    }
-
-    .reasons-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 1rem;
-    }
-
-    .reason-tag {
-      background: rgba(0, 242, 254, 0.1);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      color: var(--accent-cyan);
-      font-size: 0.75rem;
+      font-family: var(--font-f1-torque);
       padding: 0.3rem 0.6rem;
-      border-radius: 6px;
+      font-size: 0.8rem;
     }
 
-    .reason-tag.warning {
-      background: rgba(225, 6, 0, 0.15);
-      border-color: rgba(225, 6, 0, 0.4);
-      color: #ff5252;
-    }
-
-    /* Alternatives List */
-    .alt-list {
+    .tv-leaderboard {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
-    .alt-card {
-      background: rgba(22, 27, 38, 0.5);
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 1.25rem;
+    .tv-row {
+      background: rgba(31, 31, 39, 0.75);
+      border-left: 4px solid var(--f1-yellow);
+      padding: 1rem 1.25rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: border-color 0.2s;
     }
 
-    .alt-card:hover {
-      border-color: rgba(255, 255, 255, 0.2);
+    .tv-row-name {
+      font-family: var(--font-f1-torque);
+      font-size: 1.15rem;
     }
 
-    .alt-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .alt-title {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-
-    .alt-sub {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .alt-delta {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--accent-gold);
-    }
-
-    .sc-banner {
-      background: linear-gradient(90deg, #ff9100, #e10600);
-      color: white;
-      font-weight: 700;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      box-shadow: 0 4px 15px rgba(255, 145, 0, 0.3);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 0.9; }
-      50% { opacity: 1; filter: brightness(1.2); }
-      100% { opacity: 0.9; }
+    .tv-row-delta {
+      font-family: var(--font-f1-turbo);
+      font-size: 1.3rem;
+      color: var(--f1-yellow);
     }
   </style>
 </head>
 <body>
 
+  <!-- Header -->
   <header>
     <div class="brand">
-      <div class="brand-logo">F1</div>
+      <div class="brand-logo tv-skew"><span class="tv-unskew">F1</span></div>
       <div>
-        <div class="brand-title">Strategy Engine Simulator</div>
-        <div class="brand-subtitle">Axum & Serde Real-Time Telemetry & Pit Optimizer</div>
+        <div class="brand-title">Strategy Engine 2026</div>
       </div>
     </div>
-    <div class="status-badge">
-      <div class="status-dot"></div>
-      Engine Online (Port 3000)
+
+    <div class="nav-links">
+      <button class="nav-btn tv-skew active" id="nav-btn-landing" onclick="showView('landing')"><span class="tv-unskew">Home</span></button>
+      <button class="nav-btn tv-skew" id="nav-btn-simulator" onclick="showView('simulator')"><span class="tv-unskew">Live Simulator</span></button>
     </div>
   </header>
 
-  <main>
-    <!-- Left Input Panel -->
-    <div class="panel">
-      <div class="panel-title">⚙️ Race Telemetry Inputs</div>
+  <!-- VIEW 1: LANDING PAGE -->
+  <div id="view-landing" class="page-view active">
+    <div class="landing-container">
+      <div class="landing-prism-bg" id="prism-hero-bg"></div>
 
-      <div class="preset-container">
-        <button class="btn-preset" onclick="loadPreset('monza')">🏎️ Monza 53L</button>
-        <button class="btn-preset" onclick="loadPreset('sc')">🚨 SC Box Now</button>
-        <button class="btn-preset" onclick="loadPreset('wing')">🛠️ Wing Repair</button>
+      <div class="landing-overlay tv-skew">
+        <div class="tv-unskew" style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+          <div class="landing-badge">FORMULA 1 AI TELEMETRY ENGINE</div>
+          <h1 class="landing-title">PIT STOP <span>STRATEGY</span> OPTIMIZER</h1>
+          <p class="landing-desc">
+            An advanced Axum & Serde multi-stint race simulator. Calculates optimal pit stop laps, evaluates compound degradation rates, handles Safety Car & VSC window opportunities, front wing damage repairs, and mandatory FIA rules.
+          </p>
+
+          <div class="features-grid">
+            <div class="feature-card">
+              <h4>🏎️ Multi-Stop Optimization</h4>
+              <p>Sweeps 0-stop, 1-stop, and 2-stop stint strategies across all tire compounds.</p>
+            </div>
+            <div class="feature-card">
+              <h4>🚨 Cheap SC Pit Window</h4>
+              <p>Detects Safety Car and VSC discounts (~30-40% reduced pit time loss).</p>
+            </div>
+            <div class="feature-card">
+              <h4>🛠️ Damage & Penalty Control</h4>
+              <p>Itemizes wing replacement penalties and time penalties during pit stops.</p>
+            </div>
+          </div>
+
+          <button class="btn-enter-simulator tv-skew" onclick="showView('simulator')">
+            <span class="tv-unskew">ENTER SIMULATOR 🏎️</span>
+          </button>
+        </div>
       </div>
+    </div>
+  </div>
 
-      <form id="strategy-form" onsubmit="runSimulation(event)">
-        <div class="form-group">
-          <div class="form-label">
-            <span>Total Laps</span>
-            <span id="val-total-laps">57</span>
-          </div>
-          <input type="range" id="total_laps" min="20" max="78" value="57" class="form-control" oninput="updateVal('total-laps', this.value)">
+  <!-- VIEW 2: SIMULATOR DASHBOARD -->
+  <div id="view-simulator" class="page-view">
+    <div class="simulator-container">
+      <!-- Left Input Panel -->
+      <div class="tv-card">
+        <div class="tv-card-header">
+          <span>🏎️ Telemetry Inputs</span>
+          <span style="color: var(--f1-red);">LIVE</span>
         </div>
 
         <div class="form-group">
           <div class="form-label">
-            <span>Current Lap</span>
-            <span id="val-current-lap">10</span>
+            <span>Select Official F1 Grand Prix</span>
           </div>
-          <input type="range" id="current_lap" min="0" max="75" value="10" class="form-control" oninput="updateVal('current-lap', this.value)">
-        </div>
-
-        <div class="form-group">
-          <div class="form-label">
-            <span>Current Tire Compound</span>
-          </div>
-          <select id="current_tire">
-            <option value="Soft" selected>Soft (Red)</option>
-            <option value="Medium">Medium (Yellow)</option>
-            <option value="Hard">Hard (White)</option>
-            <option value="Intermediate">Intermediate (Green)</option>
-            <option value="Wet">Wet (Blue)</option>
+          <select id="circuit_select" onchange="onCircuitChange()">
+            <option value="loading">Loading F1 Circuits...</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <div class="form-label">
-            <span>Current Tire Age (Laps)</span>
-            <span id="val-tire-age">10</span>
-          </div>
-          <input type="range" id="tire_age_laps" min="0" max="40" value="10" class="form-control" oninput="updateVal('tire-age', this.value)">
-        </div>
-
-        <div class="form-group">
-          <div class="form-label">
-            <span>Track Status</span>
-          </div>
-          <select id="environment">
-            <option value="Green" selected>Green Flag (Normal)</option>
-            <option value="Yellow">Yellow Flag</option>
-            <option value="SafetyCar">Safety Car (SC Box Discount)</option>
-            <option value="VirtualSafetyCar">Virtual Safety Car (VSC)</option>
-            <option value="RedFlag">Red Flag</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <div class="form-label">
-            <span>Base Pit Loss (Seconds)</span>
-          </div>
-          <input type="number" id="base_pit_stop_loss_seconds" value="22.5" step="0.5" class="form-control">
-        </div>
-
-        <div class="checkbox-group">
-          <label class="checkbox-item">
-            <input type="checkbox" id="mandatory_pit_completed">
-            <span>Mandatory Pit Stop Already Completed</span>
-          </label>
-
-          <label class="checkbox-item">
-            <input type="checkbox" id="front_wing_damage">
-            <span>Front Wing Damage (+10.0s Repair)</span>
-          </label>
-
-          <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0;">
+        <form id="strategy-form" onsubmit="runSimulation(event)">
+          <div class="form-group">
             <div class="form-label">
-              <span>Time Penalty (Seconds)</span>
+              <span>Total Laps</span>
+              <span id="val-total-laps">53</span>
+            </div>
+            <input type="range" id="total_laps" min="20" max="78" value="53" class="form-control" oninput="updateVal('total-laps', this.value)">
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Current Lap</span>
+              <span id="val-current-lap">10</span>
+            </div>
+            <input type="range" id="current_lap" min="0" max="75" value="10" class="form-control" oninput="updateVal('current-lap', this.value)">
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Current Tire Compound</span>
+            </div>
+            <select id="current_tire">
+              <option value="Soft" selected>SOFT (Red)</option>
+              <option value="Medium">MEDIUM (Yellow)</option>
+              <option value="Hard">HARD (White)</option>
+              <option value="Intermediate">INTERMEDIATE (Green)</option>
+              <option value="Wet">WET (Blue)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Current Tire Age (Laps)</span>
+              <span id="val-tire-age">10</span>
+            </div>
+            <input type="range" id="tire_age_laps" min="0" max="40" value="10" class="form-control" oninput="updateVal('tire-age', this.value)">
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Track Status</span>
+            </div>
+            <select id="environment">
+              <option value="Green" selected>GREEN FLAG (Normal)</option>
+              <option value="Yellow">YELLOW FLAG</option>
+              <option value="SafetyCar">SAFETY CAR (SC Box Discount)</option>
+              <option value="VirtualSafetyCar">VIRTUAL SAFETY CAR (VSC)</option>
+              <option value="RedFlag">RED FLAG</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Base Pit Stop Loss (s)</span>
+            </div>
+            <input type="number" id="base_pit_stop_loss_seconds" value="25.0" step="0.5" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="cursor: pointer;">
+              <input type="checkbox" id="mandatory_pit_completed" style="width: auto;">
+              <span>Mandatory Pit Completed</span>
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="cursor: pointer;">
+              <input type="checkbox" id="front_wing_damage" style="width: auto;">
+              <span>Front Wing Damage (+10.0s)</span>
+            </label>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Time Penalty (s)</span>
             </div>
             <input type="number" id="time_penalty_seconds" value="0.0" step="5.0" min="0" class="form-control">
           </div>
+
+          <button type="submit" class="btn-f1 tv-skew" style="margin-top: 1rem;">
+            <span class="tv-unskew">CALCULATE STRATEGY ⚡</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Right Results Panel -->
+      <div>
+        <!-- F1 Telemetry Vector Circuit Engine -->
+        <div class="telemetry-track-box">
+          <div class="tv-card-header" style="border: none; padding: 0; margin-bottom: 0.5rem;">
+            <span id="circuit-card-title" style="color: var(--f1-white);">🇮🇹 MONZA CIRCUIT</span>
+            <span id="circuit-card-stats" style="color: var(--f1-yellow);">53 LAPS • 5.793 KM • PIT LOSS: 25.0S</span>
+          </div>
+
+          <div id="svg-telemetry-container" style="width: 100%; height: 260px;"></div>
+
+          <div class="track-legend">
+            <div class="legend-item"><div class="legend-color" style="background: var(--f1-green);"></div> Sector 1</div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--f1-purple);"></div> Sector 2</div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--f1-yellow);"></div> Sector 3</div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--f1-cyan);"></div> DRS Straight Zone</div>
+            <div class="legend-item"><div class="legend-color" style="background: var(--f1-red);"></div> Pit Lane & Box</div>
+          </div>
         </div>
 
-        <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Simulate Strategy ⚡</button>
-      </form>
-    </div>
-
-    <!-- Right Results Panel -->
-    <div class="panel">
-      <div class="panel-title">📊 Optimal Strategy Analytics</div>
-
-      <div id="sc-banner-container"></div>
-
-      <div id="results-container">
-        <p style="color: var(--text-muted);">Click <strong>Simulate Strategy</strong> to calculate optimal pit stops.</p>
+        <div id="results-container">
+          <p style="color: var(--text-muted);">Click <strong>CALCULATE STRATEGY</strong> to compute optimal pit windows.</p>
+        </div>
       </div>
     </div>
-  </main>
+  </div>
 
+  <!-- React Bits Line Waves Background Integration Script -->
   <script>
+    function initLineWaves(container) {
+      if (!container) return;
+      container.innerHTML = '';
+
+      const canvas = document.createElement('canvas');
+      canvas.style.position = 'absolute';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.pointerEvents = 'none';
+      container.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+      let width = 0;
+      let height = 0;
+      const mouse = { x: -1000, y: -1000, targetX: -1000, targetY: -1000 };
+
+      const resize = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = container.clientWidth || window.innerWidth;
+        height = container.clientHeight || window.innerHeight;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+      };
+
+      const ro = new ResizeObserver(resize);
+      ro.observe(container);
+      resize();
+
+      window.addEventListener('mousemove', (e) => {
+        const rect = container.getBoundingClientRect();
+        mouse.targetX = e.clientX - rect.left;
+        mouse.targetY = e.clientY - rect.top;
+      });
+
+      // React Bits Line Waves Parameters
+      const lineCount = 36;
+      const speed = 0.0014;
+      const colors = [
+        'rgba(225, 6, 0, 0.55)',    // F1 Racing Red
+        'rgba(0, 242, 254, 0.45)',   // Neon Cyan
+        'rgba(176, 0, 255, 0.40)',   // Telemetry Purple
+        'rgba(255, 209, 0, 0.35)',   // Yellow Accent
+        'rgba(255, 255, 255, 0.20)'  // Subtle Silver
+      ];
+
+      let step = 0;
+
+      function render() {
+        step += 1;
+        ctx.clearRect(0, 0, width, height);
+
+        // Smooth cursor tracking interpolation
+        mouse.x += (mouse.targetX - mouse.x) * 0.04;
+        mouse.y += (mouse.targetY - mouse.y) * 0.04;
+
+        const time = step * speed;
+        ctx.lineWidth = 1.8;
+
+        for (let i = 0; i < lineCount; i++) {
+          const yOffset = (height / lineCount) * (i + 0.5);
+          const colorIndex = i % colors.length;
+
+          ctx.beginPath();
+          ctx.strokeStyle = colors[colorIndex];
+
+          const segments = Math.ceil(width / 12);
+          for (let j = 0; j <= segments; j++) {
+            const x = (width / segments) * j;
+
+            // Layered sine wave frequency calculations
+            const wave1 = Math.sin(x * 0.004 + time * 2.0 + i * 0.18) * 32;
+            const wave2 = Math.cos(x * 0.008 - time * 1.5 + i * 0.22) * 18;
+            const wave3 = Math.sin(x * 0.002 + time * 0.9) * 38;
+
+            // Dynamic mouse wave displacement
+            const dx = x - mouse.x;
+            const dy = yOffset - mouse.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxDist = 280;
+            let mouseDistortion = 0;
+            if (dist < maxDist) {
+              mouseDistortion = Math.cos((dist / maxDist) * (Math.PI / 2)) * 65;
+            }
+
+            const y = yOffset + wave1 + wave2 + wave3 - mouseDistortion;
+
+            if (j === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.stroke();
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      render();
+    }
+
+    initLineWaves(document.getElementById('prism-hero-bg'));
+  </script>
+
+
+  <!-- Vector Telemetry Circuit Engine & Controller -->
+  <script>
+    let circuitsData = [];
+
+    function showView(viewId) {
+      document.querySelectorAll('.page-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+      document.getElementById('view-' + viewId).classList.add('active');
+      document.getElementById('nav-btn-' + viewId).classList.add('active');
+
+      if (viewId === 'simulator') {
+        const selectedId = document.getElementById('circuit_select')?.value;
+        const circuit = circuitsData.find(c => c.id === selectedId) || circuitsData[0];
+        if (circuit) fetchAndRenderRealTrackGeometry(circuit);
+      }
+    }
+
     function updateVal(id, val) {
       document.getElementById('val-' + id).innerText = val;
     }
 
-    function loadPreset(name) {
-      if (name === 'monza') {
-        document.getElementById('total_laps').value = 53;
-        document.getElementById('current_lap').value = 12;
-        document.getElementById('current_tire').value = 'Soft';
-        document.getElementById('tire_age_laps').value = 12;
-        document.getElementById('environment').value = 'Green';
-        document.getElementById('mandatory_pit_completed').checked = false;
-        document.getElementById('front_wing_damage').checked = false;
-        document.getElementById('time_penalty_seconds').value = 0;
-      } else if (name === 'sc') {
-        document.getElementById('total_laps').value = 57;
-        document.getElementById('current_lap').value = 15;
-        document.getElementById('current_tire').value = 'Soft';
-        document.getElementById('tire_age_laps').value = 15;
-        document.getElementById('environment').value = 'SafetyCar';
-        document.getElementById('mandatory_pit_completed').checked = false;
-        document.getElementById('front_wing_damage').checked = false;
-        document.getElementById('time_penalty_seconds').value = 0;
-      } else if (name === 'wing') {
-        document.getElementById('total_laps').value = 57;
-        document.getElementById('current_lap').value = 8;
-        document.getElementById('current_tire').value = 'Soft';
-        document.getElementById('tire_age_laps').value = 8;
-        document.getElementById('environment').value = 'Green';
-        document.getElementById('mandatory_pit_completed').checked = false;
-        document.getElementById('front_wing_damage').checked = true;
-        document.getElementById('time_penalty_seconds').value = 5;
+    async function fetchCircuits() {
+      try {
+        const res = await fetch('/api/tracks');
+        circuitsData = await res.json();
+
+        const select = document.getElementById('circuit_select');
+        select.innerHTML = '';
+        circuitsData.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.innerText = `${c.flag_emoji} ${c.name} (${c.country})`;
+          select.appendChild(opt);
+        });
+
+        if (circuitsData.length > 0) {
+          select.value = circuitsData[0].id;
+          onCircuitChange();
+        }
+      } catch (err) {
+        console.error("Failed to load circuits", err);
       }
+    }
 
-      updateVal('total-laps', document.getElementById('total_laps').value);
-      updateVal('current-lap', document.getElementById('current_lap').value);
-      updateVal('tire-age', document.getElementById('tire_age_laps').value);
+    function onCircuitChange() {
+      const selectedId = document.getElementById('circuit_select').value;
+      const circuit = circuitsData.find(c => c.id === selectedId);
+      if (!circuit) return;
 
-      runSimulation(new Event('submit'));
+      document.getElementById('total_laps').value = circuit.total_laps;
+      document.getElementById('base_pit_stop_loss_seconds').value = circuit.base_pit_stop_loss_seconds;
+      updateVal('total-laps', circuit.total_laps);
+
+      document.getElementById('circuit-card-title').innerText = `${circuit.flag_emoji} ${circuit.name.toUpperCase()}`;
+      document.getElementById('circuit-card-stats').innerText = `${circuit.total_laps} LAPS • ${circuit.length_km} KM • PIT LOSS: ${circuit.base_pit_stop_loss_seconds.toFixed(1)}S`;
+
+      fetchAndRenderRealTrackGeometry(circuit);
+      runSimulation(null);
+    }
+
+    /* ============================================================
+       OFFICIAL FIA F1 HIGH-DEFINITION CIRCUIT OVERLAY ENGINE
+       ============================================================
+       Renders 100% authentic, accurate F1 circuit layout vectors
+       with TV broadcast telemetry badges for Sectors, DRS & Pitlane.
+    */
+    const OFFICIAL_F1_CIRCUIT_SVG = {
+      'monza': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <!-- Monza Official Circuit Layout (Clean Non-Intersecting Vector) -->
+          <path d="M 90,230 L 375,230 L 385,222 L 395,230 Q 455,210 450,140 L 442,125 L 450,110 Q 445,65 385,60 L 265,100 L 250,110 L 235,100 L 195,115 L 115,160 Q 80,195 90,230 Z" 
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green: Start line to Lesmo 1) -->
+          <path d="M 90,230 L 375,230 L 385,222 L 395,230 Q 455,210 450,140 L 442,125 L 450,110" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple: Lesmos to Ascari) -->
+          <path d="M 450,110 Q 445,65 385,60 L 265,100 L 250,110 L 235,100 L 195,115" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow: Back straight & Parabolica to Finish) -->
+          <path d="M 195,115 L 115,160 Q 80,195 90,230 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone 1 (Main Straight) -->
+          <line x1="120" y1="218" x2="360" y2="218" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="240" y="210" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic" text-anchor="middle">DRS ZONE (MAIN STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="100" y1="245" x2="370" y2="245" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="235" cy="245" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="248" y="249" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE / BOX</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="90" y1="218" x2="90" y2="242" stroke="#ffffff" stroke-width="4"/>
+
+          <!-- Sector Badges -->
+          <text x="250" y="222" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="320" y="75" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="130" y="145" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+
+          <!-- Turn Labels -->
+          <text x="360" y="248" fill="#cfd8e3" font-family="'Space Grotesk'" font-size="10">Prima Variante</text>
+          <text x="400" y="52" fill="#cfd8e3" font-family="'Space Grotesk'" font-size="10">Lesmo 1 & 2</text>
+          <text x="220" y="130" fill="#cfd8e3" font-family="'Space Grotesk'" font-size="10">Variante Ascari</text>
+          <text x="30" y="200" fill="#cfd8e3" font-family="'Space Grotesk'" font-size="10">Curva Parabolica</text>
+        </svg>
+      `,
+
+      'silverstone': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <!-- Silverstone Official Circuit Layout -->
+          <path d="M 140,210 L 220,210 L 245,225 L 235,245 L 195,250 L 175,235 L 260,195 L 320,180 L 360,195 L 340,230 L 285,220 L 365,150 L 415,95 L 395,75 L 435,55 L 465,90 L 440,160 L 400,200 L 335,235 L 240,245 L 140,210 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 140,210 L 220,210 L 245,225 L 235,245 L 195,250 L 175,235 L 260,195" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 260,195 L 320,180 L 360,195 L 340,230 L 285,220 L 365,150 L 415,95 L 395,75 L 435,55" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 435,55 L 465,90 L 440,160 L 400,200 L 335,235 L 240,245 L 140,210 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="150" y1="198" x2="210" y2="198" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="180" y="190" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic" text-anchor="middle">DRS ZONE (HAMILTON STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="140" y1="225" x2="215" y2="225" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="175" cy="225" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="185" y="229" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="140" y1="198" x2="140" y2="222" stroke="#ffffff" stroke-width="4"/>
+
+          <!-- Sector Badges -->
+          <text x="210" y="185" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="360" y="130" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="360" y="215" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `,
+
+      'spa': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <!-- Spa-Francorchamps Official Layout -->
+          <path d="M 100,220 L 100,160 L 120,115 L 165,85 L 310,50 L 420,42 Q 465,65 445,105 L 400,130 L 355,145 L 335,175 L 380,200 L 440,210 Q 460,235 410,248 L 330,240 L 100,220 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 100,220 L 100,160 L 120,115 L 165,85 L 310,50" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 310,50 L 420,42 Q 465,65 445,105 L 400,130 L 355,145 L 335,175 L 380,200" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 380,200 L 440,210 Q 460,235 410,248 L 330,240 L 100,220 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="165" y1="75" x2="300" y2="42" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="230" y="52" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic" text-anchor="middle">DRS ZONE (KEMMEL STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="100" y1="235" x2="310" y2="235" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="205" cy="235" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="215" y="239" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="100" y1="208" x2="100" y2="232" stroke="#ffffff" stroke-width="4"/>
+
+          <!-- Telemetry Badges -->
+          <text x="110" y="140" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="390" y="90" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="260" y="220" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `,
+
+      'monaco': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <!-- Monaco Official Street Layout -->
+          <path d="M 130,230 L 130,180 L 155,135 L 195,95 L 255,65 L 325,55 L 390,70 L 440,90 Q 465,120 430,145 L 380,135 L 345,160 L 385,185 L 440,200 Q 460,230 415,245 L 345,235 L 130,230 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 130,230 L 130,180 L 155,135 L 195,95 L 255,65" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 255,65 L 325,55 L 390,70 L 440,90 Q 465,120 430,145 L 380,135 L 345,160 L 385,185" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 385,185 L 440,200 Q 460,230 415,245 L 345,235 L 130,230 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="145" y1="218" x2="330" y2="218" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="235" y="210" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic" text-anchor="middle">DRS ZONE (START/FINISH STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="130" y1="245" x2="330" y2="245" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="230" cy="245" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="240" y="249" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="130" y1="218" x2="130" y2="242" stroke="#ffffff" stroke-width="4"/>
+
+          <!-- Telemetry Badges -->
+          <text x="140" y="140" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="360" y="100" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="260" y="220" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `,
+
+      'bahrain': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <path d="M 90,225 L 350,225 L 435,215 L 415,165 L 365,150 L 320,130 L 370,100 L 425,70 L 375,48 L 300,65 L 235,100 L 180,140 L 130,180 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 90,225 L 350,225 L 435,215 L 415,165" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 415,165 L 365,150 L 320,130 L 370,100 L 425,70" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 425,70 L 375,48 L 300,65 L 235,100 L 180,140 L 130,180 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="110" y1="213" x2="330" y2="213" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="220" y="205" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic" text-anchor="middle">DRS ZONE (MAIN STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="90" y1="240" x2="350" y2="240" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="220" cy="240" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="230" y="244" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="90" y1="213" x2="90" y2="237" stroke="#ffffff" stroke-width="4"/>
+
+          <text x="220" y="218" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="390" y="125" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="220" y="110" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `,
+
+      'suzuka': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <path d="M 110,215 L 290,120 Q 360,80 430,60 Q 460,90 425,130 L 350,170 Q 280,200 210,230 L 145,240 Q 205,170 275,110 L 350,70 Q 280,50 205,70 L 140,110 Q 95,160 110,215 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 110,215 L 290,120 Q 360,80 430,60" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 430,60 Q 460,90 425,130 L 350,170 Q 280,200 210,230" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 210,230 L 145,240 Q 205,170 275,110 L 350,70 Q 280,50 205,70 L 140,110 Q 95,160 110,215 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="125" y1="205" x2="260" y2="135" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="180" y="160" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">DRS ZONE (HOME STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="110" y1="228" x2="275" y2="140" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="190" cy="185" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="200" y="189" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="110" y1="205" x2="110" y2="225" stroke="#ffffff" stroke-width="4"/>
+
+          <text x="200" y="140" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="390" y="150" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="260" y="80" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `,
+
+      'cota': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <path d="M 100,230 L 85,140 L 115,70 L 165,50 L 215,80 L 190,120 L 235,140 L 290,110 L 355,90 L 425,110 L 445,150 L 405,190 L 340,210 L 195,220 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 100,230 L 85,140 L 115,70 L 165,50 L 215,80" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 215,80 L 190,120 L 235,140 L 290,110 L 355,90 L 425,110" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 425,110 L 445,150 L 405,190 L 340,210 L 195,220 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="290" y1="98" x2="410" y2="98" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="350" y="90" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic" text-anchor="middle">DRS ZONE (BACK STRAIGHT)</text>
+
+          <!-- Pitlane -->
+          <line x1="100" y1="242" x2="200" y2="232" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="150" cy="237" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="160" y="241" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="100" y1="218" x2="100" y2="242" stroke="#ffffff" stroke-width="4"/>
+
+          <text x="130" y="110" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="310" y="115" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="340" y="200" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `,
+
+      'singapore': `
+        <svg viewBox="0 0 500 280" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
+          <pattern id="telemetry-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          </pattern>
+          <rect width="500" height="280" fill="url(#telemetry-grid)"/>
+
+          <path d="M 100,230 L 100,140 L 135,70 L 215,50 L 315,45 L 415,60 L 450,110 L 415,150 L 355,170 L 290,190 L 100,230 Z"
+                fill="none" stroke="#00f2fe" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                style="filter: drop-shadow(0 0 10px rgba(0,242,254,0.8));"/>
+
+          <!-- Sector 1 (Green) -->
+          <path d="M 100,230 L 100,140 L 135,70 L 215,50" fill="none" stroke="#00e100" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 2 (Purple) -->
+          <path d="M 215,50 L 315,45 L 415,60 L 450,110" fill="none" stroke="#b000ff" stroke-width="7" stroke-linecap="round"/>
+          <!-- Sector 3 (Yellow) -->
+          <path d="M 450,110 L 415,150 L 355,170 L 290,190 L 100,230 Z" fill="none" stroke="#ffd100" stroke-width="7" stroke-linecap="round"/>
+
+          <!-- DRS Zone -->
+          <line x1="120" y1="218" x2="270" y2="182" stroke="#00f2fe" stroke-width="3.5" stroke-dasharray="8,5"/>
+          <text x="195" y="195" fill="#00f2fe" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">DRS ZONE (RAFFLES BOULEVARD)</text>
+
+          <!-- Pitlane -->
+          <line x1="100" y1="242" x2="270" y2="202" stroke="#e10600" stroke-width="3" stroke-dasharray="6,4"/>
+          <circle cx="185" cy="222" r="5" fill="#e10600" stroke="#fff" stroke-width="1.5"/>
+          <text x="195" y="226" fill="#e10600" font-family="'Titillium Web'" font-size="10" font-weight="900" font-style="italic">PIT LANE</text>
+
+          <!-- Start / Finish Line -->
+          <line x1="100" y1="218" x2="100" y2="242" stroke="#ffffff" stroke-width="4"/>
+
+          <text x="110" y="130" fill="#00e100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S1</text>
+          <text x="320" y="65" fill="#b000ff" font-family="'Space Grotesk'" font-size="13" font-weight="900">S2</text>
+          <text x="330" y="170" fill="#ffd100" font-family="'Space Grotesk'" font-size="13" font-weight="900">S3</text>
+        </svg>
+      `
+    };
+
+    function fetchAndRenderRealTrackGeometry(circuit) {
+      const container = document.getElementById('svg-telemetry-container');
+      if (!container) return;
+
+      const svgContent = OFFICIAL_F1_CIRCUIT_SVG[circuit.id] || OFFICIAL_F1_CIRCUIT_SVG['monza'];
+      container.innerHTML = svgContent;
     }
 
     async function runSimulation(e) {
       if (e) e.preventDefault();
+      
+      const selectedCircuitId = document.getElementById('circuit_select').value;
+      const circuit = circuitsData.find(c => c.id === selectedCircuitId) || { historical_sc_probability: 0.0 };
 
       const payload = {
         track: {
           total_laps: parseInt(document.getElementById('total_laps').value),
-          base_pit_stop_loss_seconds: parseFloat(document.getElementById('base_pit_stop_loss_seconds').value)
+          base_pit_stop_loss_seconds: parseFloat(document.getElementById('base_pit_stop_loss_seconds').value),
+          historical_sc_probability: circuit.historical_sc_probability
         },
         environment: document.getElementById('environment').value,
         ego_car: {
@@ -633,75 +1181,68 @@
     }
 
     function renderResults(data, requestPayload) {
-      const scContainer = document.getElementById('sc-banner-container');
-      if (data.safety_car_advantage_active) {
-        scContainer.innerHTML = `
-          <div class="sc-banner">
-            🚨 SAFETY CAR / VSC ACTIVE: Cheap pit stop opportunity detected! (~30-40% reduced pit time loss)
-          </div>
-        `;
-      } else {
-        scContainer.innerHTML = '';
-      }
-
       const opt = data.optimal_strategy;
       const totalLaps = requestPayload.track.total_laps;
       const currentLap = requestPayload.ego_car.current_lap;
       const lapsRemaining = totalLaps - currentLap;
 
-      // Render Optimal Card
       let html = `
-        <div class="optimal-card">
-          <div class="optimal-badge">OPTIMAL STRATEGY</div>
-          <div class="strategy-name">${opt.name}</div>
+        <div class="tv-broadcast-card">
+          <div class="tv-box-banner">BOX, BOX! OPTIMAL STRATEGY</div>
+          <div class="tv-strategy-title">${opt.name}</div>
 
-          <div class="metrics-grid">
-            <div class="metric-box">
-              <div class="metric-value">${opt.projected_total_time_formatted}</div>
-              <div class="metric-label">Projected Race Time</div>
+          <div class="tv-timing-grid">
+            <div class="tv-timing-box">
+              <div class="tv-timing-val">${opt.projected_total_time_formatted}</div>
+              <div class="tv-timing-lbl">Race Time</div>
             </div>
-            <div class="metric-box">
-              <div class="metric-value">${opt.average_lap_time_seconds.toFixed(2)}s</div>
-              <div class="metric-label">Avg Lap Time</div>
+            <div class="tv-timing-box">
+              <div class="tv-timing-val">${opt.average_lap_time_seconds.toFixed(2)}s</div>
+              <div class="tv-timing-lbl">Avg Lap Pace</div>
             </div>
-            <div class="metric-box">
-              <div class="metric-value">${opt.total_degradation_loss_seconds.toFixed(1)}s</div>
-              <div class="metric-label">Tire Deg Loss</div>
+            <div class="tv-timing-box">
+              <div class="tv-timing-val">${opt.total_degradation_loss_seconds.toFixed(1)}s</div>
+              <div class="tv-timing-lbl">Degradation Loss</div>
             </div>
-            <div class="metric-box">
-              <div class="metric-value">${opt.total_pit_stop_time_loss_seconds.toFixed(1)}s</div>
-              <div class="metric-label">Total Pit Loss</div>
+            <div class="tv-timing-box">
+              <div class="tv-timing-val">${opt.total_pit_stop_time_loss_seconds.toFixed(1)}s</div>
+              <div class="tv-timing-lbl">Pit Stop Loss</div>
+            </div>
+            <div class="tv-timing-box">
+              <div class="tv-timing-val">${(data.safety_car_probability_per_lap * 100).toFixed(1)}%</div>
+              <div class="tv-timing-lbl">SC Risk / Lap</div>
             </div>
           </div>
 
-          <!-- Stint Timeline -->
-          <div class="timeline-container">
-            <div class="timeline-title">STINT & PIT STOP TIMELINE (LAPS ${currentLap} ➔ ${totalLaps})</div>
-            <div class="timeline-bar">
+          <div style="margin-top: 1.5rem;">
+            <div class="form-label">
+              <span>Stint Progression (Laps ${currentLap} ➔ ${totalLaps})</span>
+            </div>
+            <div class="stint-bar-wrap">
       `;
 
       if (opt.pit_stops.length === 0) {
-        html += `<div class="stint-segment stint-${requestPayload.ego_car.current_tire}" style="width: 100%;">
+        html += `<div class="stint-bar-seg stint-${requestPayload.ego_car.current_tire}" style="width: 100%;">
           ${requestPayload.ego_car.current_tire} (${lapsRemaining} Laps)
         </div>`;
       } else {
         let prevLap = currentLap;
         let currCompound = requestPayload.ego_car.current_tire;
 
-        opt.pit_stops.forEach((pit, idx) => {
+        opt.pit_stops.forEach((pit) => {
           let stintLaps = pit.pit_lap - prevLap;
           let widthPct = (stintLaps / lapsRemaining) * 100;
-          html += `<div class="stint-segment stint-${currCompound}" style="width: ${widthPct}%;">
+          html += `<div class="stint-bar-seg stint-${currCompound}" style="width: ${widthPct}%;">
             ${currCompound} (${stintLaps}L)
           </div>`;
-          html += `<div class="pit-marker" title="Pit Stop at Lap ${pit.pit_lap}">P</div>`;
+          html += `<div class="pit-tag">PIT L${pit.pit_lap}</div>`;
           prevLap = pit.pit_lap;
           currCompound = pit.new_compound;
         });
 
         let finalStintLaps = totalLaps - prevLap;
         let finalWidthPct = (finalStintLaps / lapsRemaining) * 100;
-        html += `<div class="stint-segment stint-${currCompound}" style="width: ${finalWidthPct}%;">
+        html += `<div class="stint-bar-seg stint-${currCompound}" style="width: ${finalWidthPct}%;">
           ${currCompound} (${finalStintLaps}L)
         </div>`;
       }
@@ -709,34 +1250,22 @@
       html += `
             </div>
           </div>
-
-          <!-- Pit Reasons -->
-          <div class="reasons-list">
-      `;
-
-      opt.pit_stops.forEach(pit => {
-        pit.reasons.forEach(r => {
-          const isWarn = r.includes('wing') || r.includes('penalty');
-          html += `<div class="reason-tag ${isWarn ? 'warning' : ''}">📍 Lap ${pit.pit_lap}: ${r}</div>`;
-        });
-      });
-
-      html += `
-          </div>
         </div>
 
-        <div class="panel-title" style="margin-top: 2rem;">⚡ Alternative Strategies Comparison</div>
-        <div class="alt-list">
+        <div class="tv-card-header" style="margin-top: 2rem;">
+          <span>⚡ ALTERNATIVE STRATEGIES COMPARISON</span>
+        </div>
+        <div class="tv-leaderboard">
       `;
 
       data.alternative_strategies.forEach(alt => {
         html += `
-          <div class="alt-card">
-            <div class="alt-info">
-              <div class="alt-title">${alt.name}</div>
-              <div class="alt-sub">${alt.total_pit_stops} Pit Stop(s) • Total: ${alt.projected_total_time_formatted} • Pit Loss: ${alt.total_pit_stop_time_loss_seconds}s</div>
+          <div class="tv-row">
+            <div>
+              <div class="tv-row-name">${alt.name}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">${alt.total_pit_stops} Pit Stop(s) • Total: ${alt.projected_total_time_formatted}</div>
             </div>
-            <div class="alt-delta">+${alt.delta_to_optimal_seconds.toFixed(1)}s</div>
+            <div class="tv-row-delta">+${alt.delta_to_optimal_seconds.toFixed(1)}s</div>
           </div>
         `;
       });
@@ -745,8 +1274,7 @@
       document.getElementById('results-container').innerHTML = html;
     }
 
-    // Run initial simulation on load
-    runSimulation(null);
+    fetchCircuits();
   </script>
 </body>
 </html>
