@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,700;1,900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <style>
     @font-face {
@@ -1133,12 +1135,75 @@
       `
     };
 
-    function fetchAndRenderRealTrackGeometry(circuit) {
+    let map = null;
+    let circuitGeoJsonLayer = null;
+    let carMarker = null;
+
+    async function fetchAndRenderRealTrackGeometry(circuit) {
       const container = document.getElementById('svg-telemetry-container');
       if (!container) return;
 
-      const svgContent = OFFICIAL_F1_CIRCUIT_SVG[circuit.id] || OFFICIAL_F1_CIRCUIT_SVG['monza'];
-      container.innerHTML = svgContent;
+      if (!map) {
+        map = L.map('svg-telemetry-container').setView([0, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap contributors, © CARTO',
+          subdomains: 'abcd',
+          maxZoom: 20
+        }).addTo(map);
+      }
+
+      try {
+        const res = await fetch(`/api/circuit-geometry?name=${encodeURIComponent(circuit.name)}`);
+        if (!res.ok) throw new Error('Failed to fetch circuit geometry');
+        const geoData = await res.json();
+
+        if (circuitGeoJsonLayer) map.removeLayer(circuitGeoJsonLayer);
+        if (carMarker) map.removeLayer(carMarker);
+
+        circuitGeoJsonLayer = L.geoJSON(geoData, {
+          style: { color: '#00f2fe', weight: 4, opacity: 0.8 }
+        }).addTo(map);
+
+        map.fitBounds(circuitGeoJsonLayer.getBounds(), { padding: [20, 20] });
+
+        // Extract coordinates to animate car marker
+        let coords = [];
+        geoData.features.forEach(f => {
+          if (f.geometry && f.geometry.type === 'LineString') {
+            coords = coords.concat(f.geometry.coordinates);
+          } else if (f.geometry && f.geometry.type === 'Polygon') {
+            coords = coords.concat(f.geometry.coordinates[0]);
+          }
+        });
+
+        if (coords.length > 0) {
+          const customIcon = L.divIcon({
+            className: 'custom-car-marker',
+            html: '<div style="width:12px; height:12px; background:var(--f1-red); border-radius:50%; box-shadow:0 0 10px var(--f1-red);"></div>',
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+          });
+          
+          carMarker = L.marker([coords[0][1], coords[0][0]], { icon: customIcon }).addTo(map);
+          let currentCoordIndex = 0;
+          
+          if (window.carAnimationInterval) clearInterval(window.carAnimationInterval);
+          window.carAnimationInterval = setInterval(() => {
+            currentCoordIndex = (currentCoordIndex + 1) % coords.length;
+            carMarker.setLatLng([coords[currentCoordIndex][1], coords[currentCoordIndex][0]]);
+          }, 100);
+        }
+
+      } catch(e) {
+        console.error("Leaflet fetch failed, falling back to SVG", e);
+        // Fallback to SVG if API fails
+        if (map) {
+          map.remove();
+          map = null;
+        }
+        const svgContent = OFFICIAL_F1_CIRCUIT_SVG[circuit.id] || OFFICIAL_F1_CIRCUIT_SVG['monza'];
+        container.innerHTML = svgContent;
+      }
     }
 
     async function runSimulation(e) {
