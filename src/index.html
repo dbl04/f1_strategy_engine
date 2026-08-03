@@ -1226,7 +1226,13 @@
           mandatory_pit_completed: document.getElementById('mandatory_pit_completed').checked,
           front_wing_damage: document.getElementById('front_wing_damage').checked,
           time_penalty_seconds: parseFloat(document.getElementById('time_penalty_seconds').value)
-        }
+        },
+        competitors: [
+          { driver_name: "VER", team: "Red Bull", current_lap: parseInt(document.getElementById('current_lap').value), gap_to_ego_seconds: -15.5, current_tire: "Hard", tire_age_laps: 12, projected_pit_lap: 40 },
+          { driver_name: "HAM", team: "Mercedes", current_lap: parseInt(document.getElementById('current_lap').value), gap_to_ego_seconds: -2.3, current_tire: "Medium", tire_age_laps: 10, projected_pit_lap: 25 },
+          { driver_name: "LEC", team: "Ferrari", current_lap: parseInt(document.getElementById('current_lap').value), gap_to_ego_seconds: 1.2, current_tire: "Soft", tire_age_laps: 8, projected_pit_lap: 18 },
+          { driver_name: "NOR", team: "McLaren", current_lap: parseInt(document.getElementById('current_lap').value), gap_to_ego_seconds: 4.5, current_tire: "Medium", tire_age_laps: 11, projected_pit_lap: 26 },
+        ]
       };
 
       try {
@@ -1336,6 +1342,77 @@
       });
 
       html += `</div>`;
+
+      // Traffic Radar Visualizer
+      if (requestPayload.competitors && requestPayload.competitors.length > 0) {
+        html += `
+          <div class="tv-card-header" style="margin-top: 2rem;">
+            <span>📡 COMPETITOR TRAFFIC RADAR</span>
+          </div>
+          <div class="tv-leaderboard">
+        `;
+        let sortedCompetitors = [...requestPayload.competitors].sort((a, b) => a.gap_to_ego_seconds - b.gap_to_ego_seconds);
+        sortedCompetitors.forEach(comp => {
+          let gapStr = comp.gap_to_ego_seconds > 0 ? `+${comp.gap_to_ego_seconds.toFixed(1)}s` : `${comp.gap_to_ego_seconds.toFixed(1)}s`;
+          let gapColor = comp.gap_to_ego_seconds > 0 ? 'var(--f1-green)' : 'var(--f1-red)';
+          html += `
+            <div class="tv-row" style="border-left-color: ${gapColor};">
+              <div>
+                <div class="tv-row-name">${comp.driver_name} <span style="font-size: 0.8rem; color: var(--text-muted);">${comp.team}</span></div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Tire: ${comp.current_tire} (${comp.tire_age_laps}L) • Projected Pit: L${comp.projected_pit_lap}</div>
+              </div>
+              <div class="tv-row-delta" style="color: ${gapColor};">${gapStr}</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      if (data.undercut_overcut_options && data.undercut_overcut_options.length > 0) {
+        html += `
+          <div class="tv-card-header" style="margin-top: 2rem;">
+            <span>⏱️ UNDERCUT / OVERCUT DELTAS</span>
+          </div>
+          <div class="tv-leaderboard">
+        `;
+        data.undercut_overcut_options.forEach(opt => {
+          let color = opt.advantage_seconds > 0 ? 'var(--f1-green)' : 'var(--f1-red)';
+          let sign = opt.advantage_seconds > 0 ? '+' : '';
+          html += `
+            <div class="tv-row" style="border-left-color: ${color};">
+              <div>
+                <div class="tv-row-name">vs ${opt.competitor_name} (Pit L${opt.ego_pit_lap})</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Delta to target pit lap (L${opt.target_pit_lap}): ${opt.pit_lap_delta > 0 ? '+'+opt.pit_lap_delta : opt.pit_lap_delta} laps</div>
+              </div>
+              <div class="tv-row-delta" style="color: ${color};">${sign}${opt.advantage_seconds.toFixed(2)}s</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      if (data.traffic_windows && data.traffic_windows.length > 0) {
+        html += `
+          <div class="tv-card-header" style="margin-top: 2rem;">
+            <span>🚦 PIT EXIT TRAFFIC WINDOW</span>
+          </div>
+          <div class="tv-leaderboard">
+        `;
+        data.traffic_windows.forEach(win => {
+          let color = win.is_clean_air ? 'var(--f1-green)' : 'var(--f1-red)';
+          html += `
+            <div class="tv-row" style="border-left-color: ${color};">
+              <div>
+                <div class="tv-row-name">Pit on Lap ${win.pit_lap}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">${win.traffic_warning}</div>
+              </div>
+              <div class="tv-row-delta" style="color: ${color};">${win.is_clean_air ? 'CLEAN AIR' : 'DRS TRAIN'}</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
       document.getElementById('results-container').innerHTML = html;
     }
 
