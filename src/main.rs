@@ -274,6 +274,16 @@ pub struct MultiStrategyResponse {
     pub summary_message: String,
     #[serde(default)]
     pub undercut_overcut_options: Vec<UndercutOvercutOption>,
+    #[serde(default)]
+    pub traffic_windows: Vec<TrafficWindowResponse>,
+}
+
+// Traffic Window Option
+#[derive(Serialize, Debug, Clone, utoipa::ToSchema)]
+pub struct TrafficWindowResponse {
+    pub pit_lap: u32,
+    pub is_clean_air: bool,
+    pub traffic_warning: String,
 }
 
 fn format_duration(seconds: f64) -> String {
@@ -439,6 +449,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
             safety_car_advantage_active: sc_active,
             summary_message: "Race completed. No laps remaining to simulate.".to_string(),
             undercut_overcut_options: vec![],
+            traffic_windows: vec![],
         };
     }
 
@@ -664,12 +675,46 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         }
     }
 
+    let mut traffic_windows = Vec::new();
+    for pit_lap in current_lap + 1..=(current_lap + 5).min(total_laps) {
+        let (pit_loss, _) = calculate_pit_stop_loss(
+            state.track.base_pit_stop_loss_seconds,
+            &state.environment,
+            state.ego_car.front_wing_damage,
+            state.ego_car.time_penalty_seconds,
+            pit_lap == current_lap + 1,
+        );
+
+        let mut clean_air = true;
+        let mut warning = "Clean air pit exit".to_string();
+
+        for comp in &state.competitors {
+            // Very rough estimate of gap after pit
+            let comp_loss = if comp.projected_pit_lap < pit_lap { pit_loss } else { 0.0 };
+            let projected_gap = comp.gap_to_ego_seconds + pit_loss - comp_loss;
+            
+            // If emerging within 2.5 seconds of a competitor, risk of DRS train
+            if projected_gap.abs() < 2.5 {
+                clean_air = false;
+                warning = format!("Traffic warning: will emerge into DRS train with {}", comp.driver_name);
+                break;
+            }
+        }
+        
+        traffic_windows.push(TrafficWindowResponse {
+            pit_lap,
+            is_clean_air: clean_air,
+            traffic_warning: warning,
+        });
+    }
+
     MultiStrategyResponse {
         optimal_strategy: optimal,
         alternative_strategies: alternatives,
         safety_car_advantage_active: sc_active,
         summary_message: summary,
         undercut_overcut_options,
+        traffic_windows,
     }
 }
 
@@ -690,7 +735,7 @@ async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategyResp
 #[derive(OpenApi)]
 #[openapi(
     paths(simulate_race, get_tracks, get_circuit_geometry),
-    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, UndercutOvercutOption, MultiStrategyResponse, CircuitInfo)),
+    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, UndercutOvercutOption, TrafficWindowResponse, MultiStrategyResponse, CircuitInfo)),
     tags(
         (name = "F1 Strategy Engine", description = "API for simulating multi-stop race strategies")
     )
