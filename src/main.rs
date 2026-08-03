@@ -3,6 +3,7 @@ use axum::{
     response::Html,
     Router,
     Json,
+    extract::Query,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::OpenApi;
@@ -13,7 +14,164 @@ async fn index_handler() -> Html<&'static str> {
     Html(include_str!("index.html"))
 }
 
-// This enum defines the possible tire compounds in F1.
+// Circuit Information metadata including OSM query name for Overpass API geometry fetching.
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
+pub struct CircuitInfo {
+    pub id: String,
+    pub name: String,
+    pub country: String,
+    pub flag_emoji: String,
+    pub total_laps: u32,
+    pub base_pit_stop_loss_seconds: f64,
+    pub length_km: f64,
+    pub osm_query_name: String,
+}
+
+/// Get list of available F1 circuits and telemetry data.
+#[utoipa::path(
+    get,
+    path = "/api/tracks",
+    responses(
+        (status = 200, description = "List of official F1 circuits", body = Vec<CircuitInfo>)
+    )
+)]
+async fn get_tracks() -> Json<Vec<CircuitInfo>> {
+    let tracks = vec![
+        CircuitInfo {
+            id: "monza".to_string(),
+            name: "Autodromo Nazionale Monza".to_string(),
+            country: "Italy".to_string(),
+            flag_emoji: "🇮🇹".to_string(),
+            total_laps: 53,
+            base_pit_stop_loss_seconds: 25.0,
+            length_km: 5.793,
+            osm_query_name: "Autodromo Nazionale Monza".to_string(),
+        },
+        CircuitInfo {
+            id: "silverstone".to_string(),
+            name: "Silverstone Circuit".to_string(),
+            country: "UK".to_string(),
+            flag_emoji: "🇬🇧".to_string(),
+            total_laps: 52,
+            base_pit_stop_loss_seconds: 20.5,
+            length_km: 5.891,
+            osm_query_name: "Silverstone Circuit".to_string(),
+        },
+        CircuitInfo {
+            id: "spa".to_string(),
+            name: "Circuit de Spa-Francorchamps".to_string(),
+            country: "Belgium".to_string(),
+            flag_emoji: "🇧🇪".to_string(),
+            total_laps: 44,
+            base_pit_stop_loss_seconds: 22.0,
+            length_km: 7.004,
+            osm_query_name: "Circuit de Spa-Francorchamps".to_string(),
+        },
+        CircuitInfo {
+            id: "monaco".to_string(),
+            name: "Circuit de Monaco".to_string(),
+            country: "Monaco".to_string(),
+            flag_emoji: "🇲🇨".to_string(),
+            total_laps: 78,
+            base_pit_stop_loss_seconds: 19.5,
+            length_km: 3.337,
+            osm_query_name: "Circuit de Monaco".to_string(),
+        },
+        CircuitInfo {
+            id: "bahrain".to_string(),
+            name: "Bahrain International Circuit".to_string(),
+            country: "Bahrain".to_string(),
+            flag_emoji: "🇧🇭".to_string(),
+            total_laps: 57,
+            base_pit_stop_loss_seconds: 22.5,
+            length_km: 5.412,
+            osm_query_name: "Bahrain International Circuit".to_string(),
+        },
+        CircuitInfo {
+            id: "suzuka".to_string(),
+            name: "Suzuka International Racing Course".to_string(),
+            country: "Japan".to_string(),
+            flag_emoji: "🇯🇵".to_string(),
+            total_laps: 53,
+            base_pit_stop_loss_seconds: 22.5,
+            length_km: 5.807,
+            osm_query_name: "Suzuka Circuit".to_string(),
+        },
+        CircuitInfo {
+            id: "cota".to_string(),
+            name: "Circuit of the Americas".to_string(),
+            country: "USA".to_string(),
+            flag_emoji: "🇺🇸".to_string(),
+            total_laps: 56,
+            base_pit_stop_loss_seconds: 20.0,
+            length_km: 5.513,
+            osm_query_name: "Circuit of the Americas".to_string(),
+        },
+        CircuitInfo {
+            id: "singapore".to_string(),
+            name: "Marina Bay Street Circuit".to_string(),
+            country: "Singapore".to_string(),
+            flag_emoji: "🇸🇬".to_string(),
+            total_laps: 62,
+            base_pit_stop_loss_seconds: 28.0,
+            length_km: 4.940,
+            osm_query_name: "Marina Bay Street Circuit".to_string(),
+        },
+    ];
+
+    Json(tracks)
+}
+
+// Query parameters for the Overpass API proxy endpoint.
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct OverpassQuery {
+    pub name: String,
+}
+
+/// Proxy endpoint to fetch real circuit geometry from OpenStreetMap Overpass API.
+/// Avoids browser CORS restrictions by proxying the request server-side.
+#[utoipa::path(
+    get,
+    path = "/api/circuit-geometry",
+    params(OverpassQuery),
+    responses(
+        (status = 200, description = "Raw Overpass API JSON response with circuit geometry")
+    )
+)]
+async fn get_circuit_geometry(Query(params): Query<OverpassQuery>) -> Json<serde_json::Value> {
+    let overpass_query = format!(
+        r#"[out:json][timeout:25];(relation["name"~"{}",i];way["highway"="raceway"]["name"~"{}",i];way["name"~"{}",i]["highway"];);(._;>;);out geom;"#,
+        params.name, params.name, params.name
+    );
+
+    let url = format!(
+        "https://overpass-api.de/api/interpreter?data={}",
+        urlencoding(&overpass_query)
+    );
+
+    match reqwest::get(&url).await {
+        Ok(resp) => {
+            match resp.json::<serde_json::Value>().await {
+                Ok(json) => Json(json),
+                Err(_) => Json(serde_json::json!({"error": "Failed to parse Overpass response", "elements": []})),
+            }
+        }
+        Err(e) => {
+            Json(serde_json::json!({"error": format!("Overpass API request failed: {}", e), "elements": []}))
+        }
+    }
+}
+
+fn urlencoding(s: &str) -> String {
+    s.bytes().map(|b| match b {
+        b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+            format!("{}", b as char)
+        }
+        _ => format!("%{:02X}", b),
+    }).collect()
+}
+
+// Tire compounds in F1.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
 pub enum TireCompound {
     Soft,
@@ -23,7 +181,7 @@ pub enum TireCompound {
     Wet,
 }
 
-// This enum defines the possible track conditions.
+// Track conditions.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
 pub enum TrackStatus {
     Green,
@@ -33,14 +191,14 @@ pub enum TrackStatus {
     RedFlag,
 }
 
-// Parameters of a track, such as total laps and standard pit stop time loss.
+// Track parameters.
 #[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct TrackParameters {
     pub total_laps: u32,
     pub base_pit_stop_loss_seconds: f64,
 }
 
-// State of the ego car, including lap count, tire condition, damage, and mandatory pit status.
+// Ego car state.
 #[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct EgoCar {
     pub current_lap: u32,
@@ -51,7 +209,7 @@ pub struct EgoCar {
     pub time_penalty_seconds: f64,
 }
 
-// Overall state of the race environment and car.
+// Race state.
 #[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct RaceState {
     pub track: TrackParameters,
@@ -59,7 +217,7 @@ pub struct RaceState {
     pub ego_car: EgoCar,
 }
 
-// Details of a single planned pit stop.
+// Single planned pit stop.
 #[derive(Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct PitStopPlan {
     pub pit_lap: u32,
@@ -68,7 +226,7 @@ pub struct PitStopPlan {
     pub reasons: Vec<String>,
 }
 
-// Details of a complete race strategy option (0-stop, 1-stop, 2-stop).
+// Complete race strategy option.
 #[derive(Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct StrategyOption {
     pub name: String,
@@ -83,7 +241,7 @@ pub struct StrategyOption {
     pub delta_to_optimal_seconds: f64,
 }
 
-// Response returned by the multi-strategy optimization engine.
+// Strategy response.
 #[derive(Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct MultiStrategyResponse {
     pub optimal_strategy: StrategyOption,
@@ -107,14 +265,36 @@ fn format_duration(seconds: f64) -> String {
     }
 }
 
-fn get_degradation_factor(compound: &TireCompound) -> f64 {
+fn get_compound_lifecycle(compound: &TireCompound) -> u32 {
     match compound {
+        TireCompound::Soft => 20,
+        TireCompound::Medium => 35,
+        TireCompound::Hard => 50,
+        TireCompound::Intermediate => 25,
+        TireCompound::Wet => 40,
+    }
+}
+
+fn get_degradation_factor(compound: &TireCompound, age: u32) -> f64 {
+    let base_rate = match compound {
         TireCompound::Soft => 0.15,
         TireCompound::Medium => 0.08,
         TireCompound::Hard => 0.04,
         TireCompound::Intermediate => 0.25,
         TireCompound::Wet => 0.30,
+    };
+
+    let lifecycle = get_compound_lifecycle(compound) as f64;
+    let cliff_lap = lifecycle * 0.8;
+    
+    let mut deg = base_rate * (age as f64);
+    
+    if (age as f64) > cliff_lap {
+        let over = (age as f64) - cliff_lap;
+        deg += (over * 0.2).exp() - 1.0; 
     }
+    
+    deg
 }
 
 fn calculate_pit_stop_loss(
@@ -130,11 +310,11 @@ fn calculate_pit_stop_loss(
     if is_pit_on_current_lap {
         match environment {
             TrackStatus::SafetyCar => {
-                pit_loss *= 0.60; // 40% discount under SC
+                pit_loss *= 0.60;
                 reasons.push(format!("Safety Car cheap pit stop discount (-{:.1}s)", base_loss * 0.40));
             }
             TrackStatus::VirtualSafetyCar => {
-                pit_loss *= 0.70; // 30% discount under VSC
+                pit_loss *= 0.70;
                 reasons.push(format!("VSC cheap pit stop discount (-{:.1}s)", base_loss * 0.30));
             }
             _ => {
@@ -169,13 +349,12 @@ fn simulate_stint(
         return (0.0, 0.0);
     }
 
-    let deg_factor = get_degradation_factor(compound);
     let mut total_stint_time = 0.0;
     let mut total_deg_loss = 0.0;
     let mut age = initial_tire_age;
 
     for _ in start_lap..end_lap {
-        let deg = deg_factor * age as f64;
+        let deg = get_degradation_factor(compound, age);
         let lap_time = match environment {
             TrackStatus::RedFlag => 0.0,
             TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0,
@@ -229,7 +408,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
 
     let mut evaluated_strategies: Vec<StrategyOption> = Vec::new();
 
-    // 1. Evaluate 0-Stop Strategy
+    // 1. 0-Stop
     let (time_0stop, deg_0stop) = simulate_stint(
         current_lap,
         total_laps,
@@ -253,7 +432,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         delta_to_optimal_seconds: 0.0,
     });
 
-    // 2. Evaluate 1-Stop Strategies
+    // 2. 1-Stop
     let pit_step = if laps_remaining > 30 { 2 } else { 1 };
 
     for pit_lap in (current_lap + 1..total_laps).step_by(pit_step) {
@@ -312,7 +491,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         }
     }
 
-    // 3. Evaluate 2-Stop Strategies
+    // 3. 2-Stop
     if laps_remaining >= 15 {
         let p1_lap = current_lap + (laps_remaining / 3);
         let p2_lap = current_lap + (2 * laps_remaining / 3);
@@ -375,7 +554,6 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         }
     }
 
-    // Sort strategies: valid strategies first, then lowest total projected time
     evaluated_strategies.sort_by(|a, b| {
         match (a.is_valid_f1_rules, b.is_valid_f1_rules) {
             (true, false) => std::cmp::Ordering::Less,
@@ -427,8 +605,8 @@ async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategyResp
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(simulate_race),
-    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, TireCompound, PitStopPlan, StrategyOption, MultiStrategyResponse)),
+    paths(simulate_race, get_tracks, get_circuit_geometry),
+    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, TireCompound, PitStopPlan, StrategyOption, MultiStrategyResponse, CircuitInfo)),
     tags(
         (name = "F1 Strategy Engine", description = "API for simulating multi-stop race strategies")
     )
@@ -439,7 +617,9 @@ struct ApiDoc;
 async fn main() {
     let app = Router::new()
         .route("/", get(index_handler))
-        .route("/simulate", post(simulate_race));
+        .route("/api/tracks", get(get_tracks))
+        .route("/simulate", post(simulate_race))
+        .route("/api/circuit-geometry", get(get_circuit_geometry));
 
     let app = app.merge(
         SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi())
