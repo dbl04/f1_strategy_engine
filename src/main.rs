@@ -209,6 +209,18 @@ pub struct EgoCar {
     pub time_penalty_seconds: f64,
 }
 
+// Competitor car state.
+#[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
+pub struct CompetitorCar {
+    pub driver_name: String,
+    pub team: String,
+    pub current_lap: u32,
+    pub gap_to_ego_seconds: f64,
+    pub current_tire: TireCompound,
+    pub tire_age_laps: u32,
+    pub projected_pit_lap: u32,
+}
+
 // Race state.
 #[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct RaceState {
@@ -609,7 +621,7 @@ async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategyResp
 #[derive(OpenApi)]
 #[openapi(
     paths(simulate_race, get_tracks, get_circuit_geometry),
-    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, TireCompound, PitStopPlan, StrategyOption, MultiStrategyResponse, CircuitInfo)),
+    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, MultiStrategyResponse, CircuitInfo)),
     tags(
         (name = "F1 Strategy Engine", description = "API for simulating multi-stop race strategies")
     )
