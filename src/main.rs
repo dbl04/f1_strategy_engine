@@ -221,6 +221,22 @@ pub struct CompetitorCar {
     pub projected_pit_lap: u32,
 }
 
+// Weather conditions
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
+pub enum WeatherState {
+    Dry,
+    Damp,
+    Wet,
+}
+
+// Weather forecast
+#[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
+pub struct WeatherForecast {
+    pub current_weather: WeatherState,
+    pub predicted_weather: WeatherState,
+    pub transition_lap: u32,
+}
+
 // Race state.
 #[derive(Deserialize, Serialize, Debug, Clone, utoipa::ToSchema)]
 pub struct RaceState {
@@ -229,6 +245,8 @@ pub struct RaceState {
     pub ego_car: EgoCar,
     #[serde(default)]
     pub competitors: Vec<CompetitorCar>,
+    #[serde(default)]
+    pub weather_forecast: Option<WeatherForecast>,
 }
 
 // Single planned pit stop.
@@ -374,6 +392,18 @@ fn calculate_pit_stop_loss(
     (pit_loss, reasons)
 }
 
+fn get_weather_for_lap(lap: u32, forecast: &Option<WeatherForecast>) -> WeatherState {
+    if let Some(f) = forecast {
+        if lap >= f.transition_lap {
+            f.predicted_weather.clone()
+        } else {
+            f.current_weather.clone()
+        }
+    } else {
+        WeatherState::Dry
+    }
+}
+
 fn simulate_stint(
     start_lap: u32,
     end_lap: u32,
@@ -381,6 +411,7 @@ fn simulate_stint(
     initial_tire_age: u32,
     environment: &TrackStatus,
     competitors: &[CompetitorCar],
+    weather_forecast: &Option<WeatherForecast>,
 ) -> (f64, f64) {
     if start_lap >= end_lap {
         return (0.0, 0.0);
@@ -405,10 +436,37 @@ fn simulate_stint(
             }
         }
         
+        let weather = get_weather_for_lap(lap, weather_forecast);
+        let mut weather_penalty = 0.0;
+        
+        match weather {
+            WeatherState::Dry => {
+                match compound {
+                    TireCompound::Intermediate => weather_penalty += 10.0,
+                    TireCompound::Wet => weather_penalty += 20.0,
+                    _ => {},
+                }
+            },
+            WeatherState::Damp => {
+                match compound {
+                    TireCompound::Soft | TireCompound::Medium | TireCompound::Hard => weather_penalty += 15.0,
+                    TireCompound::Intermediate => weather_penalty += 0.0,
+                    TireCompound::Wet => weather_penalty += 5.0,
+                }
+            },
+            WeatherState::Wet => {
+                match compound {
+                    TireCompound::Soft | TireCompound::Medium | TireCompound::Hard => weather_penalty += 30.0,
+                    TireCompound::Intermediate => weather_penalty += 5.0,
+                    TireCompound::Wet => weather_penalty += 0.0,
+                }
+            }
+        }
+        
         let lap_time = match environment {
             TrackStatus::RedFlag => 0.0,
-            TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0 + fuel_effect + track_evolution + dirty_air_penalty,
-            TrackStatus::Green | TrackStatus::Yellow => 90.0 + deg + fuel_effect + track_evolution + dirty_air_penalty,
+            TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0 + fuel_effect + track_evolution + dirty_air_penalty + weather_penalty,
+            TrackStatus::Green | TrackStatus::Yellow => 90.0 + deg + fuel_effect + track_evolution + dirty_air_penalty + weather_penalty,
         };
 
         if *environment != TrackStatus::RedFlag {
@@ -468,6 +526,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         state.ego_car.tire_age_laps,
         &state.environment,
         &state.competitors,
+        &state.weather_forecast,
     );
 
     let is_valid_0stop = state.ego_car.mandatory_pit_completed;
@@ -507,6 +566,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
                 state.ego_car.tire_age_laps,
                 &state.environment,
                 &state.competitors,
+                &state.weather_forecast,
             );
 
             let (stint2_time, stint2_deg) = simulate_stint(
@@ -516,6 +576,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
                 0,
                 &state.environment,
                 &state.competitors,
+                &state.weather_forecast,
             );
 
             let total_time = stint1_time + pit_loss + stint2_time;
@@ -570,9 +631,9 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
 
             for c1 in &candidate_compounds {
                 for c2 in &candidate_compounds {
-                    let (s1_t, s1_d) = simulate_stint(current_lap, p1_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors);
-                    let (s2_t, s2_d) = simulate_stint(p1_lap, p2_lap, c1, 0, &state.environment, &state.competitors);
-                    let (s3_t, s3_d) = simulate_stint(p2_lap, total_laps, c2, 0, &state.environment, &state.competitors);
+                    let (s1_t, s1_d) = simulate_stint(current_lap, p1_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors, &state.weather_forecast);
+                    let (s2_t, s2_d) = simulate_stint(p1_lap, p2_lap, c1, 0, &state.environment, &state.competitors, &state.weather_forecast);
+                    let (s3_t, s3_d) = simulate_stint(p2_lap, total_laps, c2, 0, &state.environment, &state.competitors, &state.weather_forecast);
 
                     let total_time = s1_t + pit1_loss + s2_t + pit2_loss + s3_t;
                     let total_deg = s1_d + s2_d + s3_d;
@@ -651,15 +712,15 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
             continue;
         }
 
-        let baseline_s1 = simulate_stint(current_lap, target_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors).0;
-        let baseline_s2 = simulate_stint(target_lap, total_laps, &candidate_new_compound, 0, &state.environment, &state.competitors).0;
+        let baseline_s1 = simulate_stint(current_lap, target_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors, &state.weather_forecast).0;
+        let baseline_s2 = simulate_stint(target_lap, total_laps, &candidate_new_compound, 0, &state.environment, &state.competitors, &state.weather_forecast).0;
         let baseline_total = baseline_s1 + baseline_s2;
 
         for delta in [-3, -2, -1, 1, 2, 3] {
             let ego_pit_lap = (target_lap as i32 + delta) as u32;
             if ego_pit_lap > current_lap && ego_pit_lap < total_laps {
-                let s1 = simulate_stint(current_lap, ego_pit_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors).0;
-                let s2 = simulate_stint(ego_pit_lap, total_laps, &candidate_new_compound, 0, &state.environment, &state.competitors).0;
+                let s1 = simulate_stint(current_lap, ego_pit_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors, &state.weather_forecast).0;
+                let s2 = simulate_stint(ego_pit_lap, total_laps, &candidate_new_compound, 0, &state.environment, &state.competitors, &state.weather_forecast).0;
                 let total = s1 + s2;
                 
                 let advantage = baseline_total - total; // positive means faster
@@ -735,7 +796,7 @@ async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategyResp
 #[derive(OpenApi)]
 #[openapi(
     paths(simulate_race, get_tracks, get_circuit_geometry),
-    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, UndercutOvercutOption, TrafficWindowResponse, MultiStrategyResponse, CircuitInfo)),
+    components(schemas(RaceState, TrackParameters, TrackStatus, EgoCar, CompetitorCar, TireCompound, PitStopPlan, StrategyOption, UndercutOvercutOption, TrafficWindowResponse, MultiStrategyResponse, CircuitInfo, WeatherState, WeatherForecast)),
     tags(
         (name = "F1 Strategy Engine", description = "API for simulating multi-stop race strategies")
     )
@@ -767,7 +828,7 @@ mod tests {
 
     #[test]
     fn test_simulate_stint() {
-        let (time, deg) = simulate_stint(1, 10, &TireCompound::Soft, 0, &TrackStatus::Green, &[]);
+        let (time, deg) = simulate_stint(1, 10, &TireCompound::Soft, 0, &TrackStatus::Green, &[], &None);
         assert!(time > 0.0);
         assert!(deg > 0.0);
     }
@@ -808,6 +869,7 @@ mod tests {
                 time_penalty_seconds: 0.0,
             },
             competitors: vec![],
+            weather_forecast: None,
         };
         let response = optimize_race_strategies(&state);
         // Best strategy might be 0 stop or 1 stop, but 0 stop MUST be valid
@@ -831,6 +893,7 @@ mod tests {
                 time_penalty_seconds: 0.0,
             },
             competitors: vec![],
+            weather_forecast: None,
         };
         let response = optimize_race_strategies(&state);
         // The optimal strategy should have 1 stop, because 0 stop is invalid

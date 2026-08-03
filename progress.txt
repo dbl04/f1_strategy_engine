@@ -6,3 +6,4 @@
 - Completed Phase 2: Dirty Air Time Loss
 - Completed Phase 2: Undercut / Overcut Calculator
 - Completed Phase 2: Pit Exit Traffic Window Release
+- Completed Phase 3: Dynamic Weather Transitions
