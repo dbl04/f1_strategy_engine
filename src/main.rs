@@ -634,3 +634,80 @@ async fn main() {
 
     axum::serve(listener, app).await.unwrap();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simulate_stint() {
+        let (time, deg) = simulate_stint(1, 10, &TireCompound::Soft, 0, &TrackStatus::Green);
+        assert!(time > 0.0);
+        assert!(deg > 0.0);
+    }
+
+    #[test]
+    fn test_pit_stop_loss_penalties_damage() {
+        let (loss, reasons) = calculate_pit_stop_loss(20.0, &TrackStatus::Green, true, 5.0, false);
+        assert_eq!(loss, 20.0 + 10.0 + 5.0);
+        assert_eq!(reasons.len(), 3);
+    }
+
+    #[test]
+    fn test_safety_car_pit_loss() {
+        let (loss, _) = calculate_pit_stop_loss(20.0, &TrackStatus::SafetyCar, false, 0.0, true);
+        assert_eq!(loss, 12.0); // 20.0 * 0.6
+    }
+
+    #[test]
+    fn test_vsc_pit_loss() {
+        let (loss, _) = calculate_pit_stop_loss(20.0, &TrackStatus::VirtualSafetyCar, false, 0.0, true);
+        assert_eq!(loss, 14.0); // 20.0 * 0.7
+    }
+
+    #[test]
+    fn test_optimize_race_strategies_valid_0_stop() {
+        let state = RaceState {
+            track: TrackParameters {
+                total_laps: 50,
+                base_pit_stop_loss_seconds: 20.0,
+            },
+            environment: TrackStatus::Green,
+            ego_car: EgoCar {
+                current_lap: 45,
+                current_tire: TireCompound::Hard,
+                tire_age_laps: 5,
+                mandatory_pit_completed: true,
+                front_wing_damage: false,
+                time_penalty_seconds: 0.0,
+            },
+        };
+        let response = optimize_race_strategies(&state);
+        // Best strategy might be 0 stop or 1 stop, but 0 stop MUST be valid
+        assert!(response.optimal_strategy.is_valid_f1_rules);
+    }
+
+    #[test]
+    fn test_optimize_race_strategies_invalid_compound() {
+        let state = RaceState {
+            track: TrackParameters {
+                total_laps: 50,
+                base_pit_stop_loss_seconds: 20.0,
+            },
+            environment: TrackStatus::Green,
+            ego_car: EgoCar {
+                current_lap: 45,
+                current_tire: TireCompound::Hard,
+                tire_age_laps: 5,
+                mandatory_pit_completed: false, // Did not do mandatory pit!
+                front_wing_damage: false,
+                time_penalty_seconds: 0.0,
+            },
+        };
+        let response = optimize_race_strategies(&state);
+        // The optimal strategy should have 1 stop, because 0 stop is invalid
+        // (optimal strategies are sorted to put valid ones first)
+        assert!(response.optimal_strategy.is_valid_f1_rules);
+        assert!(response.optimal_strategy.total_pit_stops > 0);
+    }
+}
