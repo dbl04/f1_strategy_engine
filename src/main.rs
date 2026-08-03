@@ -227,6 +227,8 @@ pub struct RaceState {
     pub track: TrackParameters,
     pub environment: TrackStatus,
     pub ego_car: EgoCar,
+    #[serde(default)]
+    pub competitors: Vec<CompetitorCar>,
 }
 
 // Single planned pit stop.
@@ -356,6 +358,7 @@ fn simulate_stint(
     compound: &TireCompound,
     initial_tire_age: u32,
     environment: &TrackStatus,
+    competitors: &[CompetitorCar],
 ) -> (f64, f64) {
     if start_lap >= end_lap {
         return (0.0, 0.0);
@@ -370,10 +373,20 @@ fn simulate_stint(
         let fuel_effect = (lap as f64) * -0.03;
         let track_evolution = (lap as f64) * -0.015;
         
+        let mut dirty_air_penalty = 0.0;
+        for comp in competitors {
+            if comp.gap_to_ego_seconds > 0.0 && comp.gap_to_ego_seconds <= 1.5 {
+                if lap < comp.projected_pit_lap {
+                    dirty_air_penalty = 1.0;
+                    break;
+                }
+            }
+        }
+        
         let lap_time = match environment {
             TrackStatus::RedFlag => 0.0,
-            TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0 + fuel_effect + track_evolution,
-            TrackStatus::Green | TrackStatus::Yellow => 90.0 + deg + fuel_effect + track_evolution,
+            TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => 90.0 + deg + 30.0 + fuel_effect + track_evolution + dirty_air_penalty,
+            TrackStatus::Green | TrackStatus::Yellow => 90.0 + deg + fuel_effect + track_evolution + dirty_air_penalty,
         };
 
         if *environment != TrackStatus::RedFlag {
@@ -430,6 +443,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         &state.ego_car.current_tire,
         state.ego_car.tire_age_laps,
         &state.environment,
+        &state.competitors,
     );
 
     let is_valid_0stop = state.ego_car.mandatory_pit_completed;
@@ -468,6 +482,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
                 &state.ego_car.current_tire,
                 state.ego_car.tire_age_laps,
                 &state.environment,
+                &state.competitors,
             );
 
             let (stint2_time, stint2_deg) = simulate_stint(
@@ -476,6 +491,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
                 new_compound,
                 0,
                 &state.environment,
+                &state.competitors,
             );
 
             let total_time = stint1_time + pit_loss + stint2_time;
@@ -530,9 +546,9 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
 
             for c1 in &candidate_compounds {
                 for c2 in &candidate_compounds {
-                    let (s1_t, s1_d) = simulate_stint(current_lap, p1_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment);
-                    let (s2_t, s2_d) = simulate_stint(p1_lap, p2_lap, c1, 0, &state.environment);
-                    let (s3_t, s3_d) = simulate_stint(p2_lap, total_laps, c2, 0, &state.environment);
+                    let (s1_t, s1_d) = simulate_stint(current_lap, p1_lap, &state.ego_car.current_tire, state.ego_car.tire_age_laps, &state.environment, &state.competitors);
+                    let (s2_t, s2_d) = simulate_stint(p1_lap, p2_lap, c1, 0, &state.environment, &state.competitors);
+                    let (s3_t, s3_d) = simulate_stint(p2_lap, total_laps, c2, 0, &state.environment, &state.competitors);
 
                     let total_time = s1_t + pit1_loss + s2_t + pit2_loss + s3_t;
                     let total_deg = s1_d + s2_d + s3_d;
@@ -653,7 +669,7 @@ mod tests {
 
     #[test]
     fn test_simulate_stint() {
-        let (time, deg) = simulate_stint(1, 10, &TireCompound::Soft, 0, &TrackStatus::Green);
+        let (time, deg) = simulate_stint(1, 10, &TireCompound::Soft, 0, &TrackStatus::Green, &[]);
         assert!(time > 0.0);
         assert!(deg > 0.0);
     }
@@ -693,6 +709,7 @@ mod tests {
                 front_wing_damage: false,
                 time_penalty_seconds: 0.0,
             },
+            competitors: vec![],
         };
         let response = optimize_race_strategies(&state);
         // Best strategy might be 0 stop or 1 stop, but 0 stop MUST be valid
@@ -715,6 +732,7 @@ mod tests {
                 front_wing_damage: false,
                 time_penalty_seconds: 0.0,
             },
+            competitors: vec![],
         };
         let response = optimize_race_strategies(&state);
         // The optimal strategy should have 1 stop, because 0 stop is invalid
