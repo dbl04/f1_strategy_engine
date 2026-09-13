@@ -631,7 +631,7 @@
               </tr>
             </thead>
             <tbody id="timingTowerBody">
-              <!-- Deduplicated unique driver records -->
+              <!-- Deduplicated 22 unique driver records -->
             </tbody>
           </table>
         </div>
@@ -641,7 +641,7 @@
       <div class="panel center-panel-wrapper">
         <div class="canvas-container">
           <div class="panel-header">
-            <span>VISUALIZER DUAL DISPLAY</span>
+            <span>60 FPS LERP GAME ENGINE VISUALIZER</span>
             <div style="display: flex; gap: 6px;">
               <button id="btnViz2D" class="viz-toggle-btn active" onclick="switchVisualizer('2d')">🏁 2D CIRCUIT MAP</button>
               <button id="btnVizRing" class="viz-toggle-btn" onclick="switchVisualizer('ring')">⭕ CIRCULAR LAP RING</button>
@@ -792,16 +792,28 @@
     let currentSessionLocation = "Monza";
     let followedDriverNo = 1;
     let activeVisualizer = "2d";
+    let networkPollInterval = null;
 
-    // In-Memory Deduplicated Driver State Map
-    const driverStateMap = new Map();
+    // Driver LERP Interpolation State Map
+    const lerpDriversMap = new Map();
+    let refTrackPoints = [];
 
-    const DRIVER_NAMES = {
-      1: "VER", 4: "NOR", 16: "LEC", 81: "PIA", 63: "RUS", 44: "HAM",
-      14: "ALO", 18: "STR", 10: "GAS", 31: "OCO", 23: "ALB", 55: "SAI",
-      27: "HUL", 30: "LAW", 22: "TSU", 87: "BEA", 12: "ANT", 7: "DOO",
-      5: "BOR", 3: "RIC", 77: "BOT", 24: "ZHO"
-    };
+    function getLapProgressForCoords(x, y) {
+      if (!refTrackPoints || refTrackPoints.length === 0) return 0;
+      let minSqDist = Infinity;
+      let closestProgress = 0;
+      for (let i = 0; i < refTrackPoints.length; i++) {
+        const pt = refTrackPoints[i];
+        const dx = pt.x - x;
+        const dy = pt.y - y;
+        const sqDist = dx * dx + dy * dy;
+        if (sqDist < minSqDist) {
+          minSqDist = sqDist;
+          closestProgress = pt.progress;
+        }
+      }
+      return closestProgress;
+    }
 
     const TEAM_COLORS = {
       1: '#3671C6', 4: '#FF8000', 81: '#FF8000', 16: '#E80020', 44: '#E80020',
@@ -810,7 +822,7 @@
       27: '#52E252', 5: '#52E252', 22: '#6692FF', 30: '#6692FF',
     };
 
-    // 1. OpenF1 Reference Lap X/Y Radar Map Engine (Strict Stroke, Sanitized)
+    // 1. 2D Circuit Map Engine (Pure Cartesian X, Y Scaling - Zero Sin/Cos Warping)
     class OpenF1RadarEngine {
       constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -818,9 +830,6 @@
         this.cachedPath2D = null;
         this.refCoords = [];
         this.bounds = null;
-        this.driverLocations = [];
-        this.followedDriver = 1;
-        this.pollingInterval = null;
         this.scale = 1.0;
         this.offsetX = 0;
         this.offsetY = 0;
@@ -829,17 +838,43 @@
       async loadReferenceLapMap(sessionKey) {
         this.refCoords = [];
         this.cachedPath2D = null;
+        refTrackPoints = [];
 
         try {
+          // Query backend proxy route (never direct openf1)
           const resp = await fetch(`/api/openf1/location?session_key=${sessionKey}`);
           if (resp.ok) {
             const locs = await resp.json();
-            if (locs.length > 0) {
-              // Sanitize coordinates: strip (0,0) and extreme outliers
-              this.refCoords = locs
-                .filter(l => (l.x !== 0 || l.y !== 0) && Math.abs(l.x) < 100000 && Math.abs(l.y) < 100000)
-                .map(l => ({ x: l.x, y: l.y }));
-              
+            const rawCoords = locs
+              .filter(l => (l.x !== 0 || l.y !== 0) && Math.abs(l.x) < 100000 && Math.abs(l.y) < 100000)
+              .map(l => ({ x: l.x, y: l.y }));
+
+            if (rawCoords.length > 0) {
+              this.refCoords = rawCoords;
+
+              // Calculate cumulative polyline distances & normalized progress (0.0 to 1.0)
+              let totalDist = 0;
+              const pointsWithDist = [];
+              for (let i = 0; i < rawCoords.length; i++) {
+                if (i === 0) {
+                  pointsWithDist.push({ x: rawCoords[0].x, y: rawCoords[0].y, dist: 0 });
+                } else {
+                  const dx = rawCoords[i].x - rawCoords[i - 1].x;
+                  const dy = rawCoords[i].y - rawCoords[i - 1].y;
+                  const segDist = Math.sqrt(dx * dx + dy * dy);
+                  totalDist += segDist;
+                  pointsWithDist.push({ x: rawCoords[i].x, y: rawCoords[i].y, dist: totalDist });
+                }
+              }
+
+              const totalLapDist = totalDist > 0 ? totalDist : 1;
+              refTrackPoints = pointsWithDist.map(pt => ({
+                x: pt.x,
+                y: pt.y,
+                distFromStart: pt.dist,
+                progress: pt.dist / totalLapDist
+              }));
+
               this.calculateBounds();
               this.rebuildPath2D();
             }
@@ -862,52 +897,48 @@
         this.bounds = { minX, maxX, minY, maxY };
       }
 
+      projectLocation(x, y) {
+        if (!this.bounds || !this.canvas) return { cx: 0, cy: 0 };
+        const { minX, maxX, minY, maxY } = this.bounds;
+        const padding = 25;
+        const scaleX = (this.canvas.width - padding * 2) / (maxX - minX || 1);
+        const scaleY = (this.canvas.height - padding * 2) / (maxY - minY || 1);
+        const globalScale = Math.min(scaleX, scaleY);
+
+        const offsetX = (this.canvas.width - (maxX - minX) * globalScale) / 2;
+        const offsetY = (this.canvas.height - (maxY - minY) * globalScale) / 2;
+
+        return {
+          cx: offsetX + (x - minX) * globalScale,
+          cy: this.canvas.height - (offsetY + (y - minY) * globalScale)
+        };
+      }
+
       rebuildPath2D() {
         if (!this.canvas || !this.bounds || this.refCoords.length === 0) return;
         
         this.canvas.width = this.canvas.parentElement.clientWidth;
         this.canvas.height = this.canvas.parentElement.clientHeight;
 
-        const { minX, maxX, minY, maxY } = this.bounds;
-        const padding = 35;
-        const widthScale = (this.canvas.width - padding * 2) / (maxX - minX || 1);
-        const heightScale = (this.canvas.height - padding * 2) / (maxY - minY || 1);
-        const scale = Math.min(widthScale, heightScale);
-
-        this.scale = scale;
-        this.offsetX = (this.canvas.width - (maxX - minX) * scale) / 2;
-        this.offsetY = (this.canvas.height - (maxY - minY) * scale) / 2;
-
         const path = new Path2D();
         this.refCoords.forEach((c, idx) => {
-          const px = this.offsetX + (c.x - minX) * scale;
-          const py = this.canvas.height - (this.offsetY + (c.y - minY) * scale);
-          if (idx === 0) path.moveTo(px, py);
-          else path.lineTo(px, py);
+          const { cx, cy } = this.projectLocation(c.x, c.y);
+          if (idx === 0) path.moveTo(cx, cy);
+          else path.lineTo(cx, cy);
         });
 
         this.cachedPath2D = path;
       }
 
-      updateDriverLocations(locations) {
-        this.driverLocations = locations || [];
-        this.render();
-        if (circularRingEngine) {
-          circularRingEngine.updateDriverLocations(locations);
-        }
-      }
-
-      setFollowedDriver(driverNo) {
-        this.followedDriver = driverNo;
-        this.render();
-        if (circularRingEngine) {
-          circularRingEngine.setFollowedDriver(driverNo);
-        }
-      }
-
       render() {
         if (!this.canvas || !this.ctx || activeVisualizer !== "2d") return;
         const ctx = this.ctx;
+
+        const parentW = this.canvas.parentElement.clientWidth;
+        const parentH = this.canvas.parentElement.clientHeight;
+        if (this.canvas.width !== parentW || this.canvas.height !== parentH) {
+          this.rebuildPath2D();
+        }
 
         ctx.fillStyle = '#020204';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -928,45 +959,30 @@
           return;
         }
 
-        if (!this.bounds || this.driverLocations.length === 0) return;
+        if (!this.bounds) return;
 
-        const { minX, maxX, minY, maxY } = this.bounds;
+        // Render LERP Interpolated Drivers using the exact same projectLocation function
+        lerpDriversMap.forEach(driver => {
+          const { cx, cy } = this.projectLocation(driver.currentX, driver.currentY);
 
-        this.driverLocations.forEach(loc => {
-          if (loc.x === 0 && loc.y === 0) return;
-
-          let px, py;
-          if (Math.abs(loc.x) > 100 || Math.abs(loc.y) > 100) {
-            const normX = (loc.x - (-2000)) / (4000);
-            const normY = (loc.y - (-2000)) / (4000);
-            px = this.offsetX + normX * (maxX - minX) * this.scale;
-            py = this.canvas.height - (this.offsetY + normY * (maxY - minY) * this.scale);
-          } else {
-            px = this.offsetX + (loc.x - minX) * this.scale;
-            py = this.canvas.height - (this.offsetY + (loc.y - minY) * this.scale);
-          }
-
-          px = Math.max(15, Math.min(this.canvas.width - 15, px));
-          py = Math.max(15, Math.min(this.canvas.height - 15, py));
-
-          const isFollowed = (this.followedDriver && parseInt(this.followedDriver) === loc.driver_number);
-          const color = TEAM_COLORS[loc.driver_number] || '#a855f7';
+          const isFollowed = (followedDriverNo === driver.driver_number);
+          const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
 
           if (isFollowed) {
             ctx.beginPath();
-            ctx.arc(px, py, 13, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 14, 0, Math.PI * 2);
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(px, py, 9, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(168, 85, 247, 0.35)';
+            ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
             ctx.fill();
           }
 
           ctx.beginPath();
-          ctx.arc(px, py, isFollowed ? 6 : 4.5, 0, Math.PI * 2);
+          ctx.arc(cx, cy, isFollowed ? 7 : 5, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
           ctx.strokeStyle = '#000000';
@@ -975,53 +991,16 @@
 
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 9px JetBrains Mono';
-          const dName = DRIVER_NAMES[loc.driver_number] || loc.driver_number;
-          ctx.fillText(`${dName}`, px + 7, py + 3);
+          ctx.fillText(`${driver.tla}`, cx + 7, cy + 3);
         });
-      }
-
-      startPolling(sessionKey) {
-        if (this.pollingInterval) clearInterval(this.pollingInterval);
-        const fetchLocs = async () => {
-          try {
-            const resp = await fetch(`/api/openf1/location?session_key=${sessionKey}`);
-            if (resp.ok) {
-              const locs = await resp.json();
-              this.updateDriverLocations(locs);
-            }
-          } catch (e) {
-            console.error("Failed to poll locations", e);
-          }
-        };
-        fetchLocs();
-        this.pollingInterval = setInterval(fetchLocs, 1000);
-      }
-
-      stopPolling() {
-        if (this.pollingInterval) {
-          clearInterval(this.pollingInterval);
-          this.pollingInterval = null;
-        }
       }
     }
 
-    // 2. Circular Lap Ring Radar Engine (0° to 360° Progress Visualizer)
+    // 2. Circular Lap Ring Radar Engine (Pure Polar Trigonometry Progress Circle)
     class CircularRingEngine {
       constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
-        this.driverLocations = [];
-        this.followedDriver = 1;
-      }
-
-      updateDriverLocations(locations) {
-        this.driverLocations = locations || [];
-        this.render();
-      }
-
-      setFollowedDriver(driverNo) {
-        this.followedDriver = driverNo;
-        this.render();
       }
 
       render() {
@@ -1040,7 +1019,7 @@
         ctx.fillStyle = '#020204';
         ctx.fillRect(0, 0, width, height);
 
-        // Circular lap track ring
+        // Circular progress track
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.strokeStyle = '#222233';
@@ -1067,20 +1046,19 @@
         ctx.font = 'bold 9px JetBrains Mono';
         ctx.fillText('FINISH', cx - 18, sfY1 - 4);
 
-        if (this.driverLocations.length === 0) return;
+        const drivers = Array.from(lerpDriversMap.values());
+        if (drivers.length === 0) return;
 
-        // Plot drivers around the circumference based on progress fraction
-        this.driverLocations.forEach((loc, idx) => {
-          // Normalize driver lap progress (0.0 to 1.0)
-          const fraction = (idx / this.driverLocations.length);
-          // Angle starting from 12 o'clock (-PI/2) going clockwise
-          const angle = -Math.PI / 2 + fraction * Math.PI * 2;
+        // Plot drivers radially around circumference based on true telemetry progress
+        drivers.forEach(driver => {
+          const progress = getLapProgressForCoords(driver.currentX, driver.currentY);
+          const angle = (progress * 2 * Math.PI) - (Math.PI / 2);
 
           const px = cx + Math.cos(angle) * radius;
           const py = cy + Math.sin(angle) * radius;
 
-          const isFollowed = (this.followedDriver && parseInt(this.followedDriver) === loc.driver_number);
-          const color = TEAM_COLORS[loc.driver_number] || '#a855f7';
+          const isFollowed = (followedDriverNo === driver.driver_number);
+          const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
 
           if (isFollowed) {
             ctx.beginPath();
@@ -1098,21 +1076,37 @@
           ctx.lineWidth = 1;
           ctx.stroke();
 
-          // Radial label offset
           const labelDist = radius + (isFollowed ? 22 : 16);
           const lx = cx + Math.cos(angle) * labelDist;
           const ly = cy + Math.sin(angle) * labelDist;
 
           ctx.fillStyle = isFollowed ? '#a855f7' : '#ffffff';
           ctx.font = isFollowed ? 'bold 10px JetBrains Mono' : '9px JetBrains Mono';
-          const dName = DRIVER_NAMES[loc.driver_number] || loc.driver_number;
-          ctx.fillText(`${dName}`, lx - 10, ly + 3);
+          ctx.fillText(`${driver.tla}`, lx - 10, ly + 3);
         });
       }
     }
 
     const radarEngine = new OpenF1RadarEngine('trackCanvas');
     const circularRingEngine = new CircularRingEngine('ringCanvas');
+
+    // 3. 60 FPS LERP Game Render Loop
+    function renderLoop() {
+      // Smooth Linear Interpolation towards targets
+      lerpDriversMap.forEach(driver => {
+        driver.currentX += (driver.targetX - driver.currentX) * 0.08;
+        driver.currentY += (driver.targetY - driver.currentY) * 0.08;
+      });
+
+      if (activeVisualizer === '2d') {
+        radarEngine.render();
+      } else if (activeVisualizer === 'ring') {
+        circularRingEngine.render();
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
 
     function switchVisualizer(type) {
       activeVisualizer = type;
@@ -1132,7 +1126,7 @@
 
     // Navigation & Views
     function showLandingView() {
-      radarEngine.stopPolling();
+      if (networkPollInterval) clearInterval(networkPollInterval);
       document.getElementById('landingView').classList.remove('hidden');
       document.getElementById('dashboardView').classList.add('hidden');
     }
@@ -1149,11 +1143,9 @@
       document.getElementById('dashboardView').classList.remove('hidden');
 
       await radarEngine.loadReferenceLapMap(sessionKey);
-      radarEngine.startPolling(sessionKey);
       
       renderTelemetryCanvas();
-      await fetchLiveTimingTower(sessionKey);
-      await fetchLiveEnvironmentAndWeather(sessionKey);
+      startNetworkPolling(sessionKey);
       runSimulation();
     }
 
@@ -1163,6 +1155,124 @@
 
       event.target.classList.add('active');
       document.getElementById(tabId).classList.add('active');
+    }
+
+    // 4. Rate-Limit Shielded Backend Live State Network Polling
+    function startNetworkPolling(sessionKey) {
+      if (networkPollInterval) clearInterval(networkPollInterval);
+
+      const pollState = async () => {
+        try {
+          const resp = await fetch(`/api/live-state/${sessionKey}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            updateLiveState(data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch live state", e);
+        }
+      };
+
+      pollState();
+      networkPollInterval = setInterval(pollState, 1500); // 1.5s rate-limit safe polling
+    }
+
+    function updateLiveState(data) {
+      if (!data || !data.drivers) return;
+
+      // Update Track Status & Temps
+      if (data.track_status) {
+        const badge = document.getElementById('statusBadge');
+        badge.className = `status-badge status-${data.track_status.toLowerCase()}`;
+        badge.innerText = `TRACK STATUS: ${data.track_status.toUpperCase()}`;
+        document.getElementById('envSelect').value = data.track_status === "SAFETY CAR" ? "SafetyCar" : (data.track_status === "VSC" ? "VirtualSafetyCar" : "Green");
+      }
+
+      if (data.track_temperature) {
+        document.getElementById('headerTrackTemp').innerText = `${data.track_temperature.toFixed(1)}°C`;
+        document.getElementById('rcTrackTemp').value = data.track_temperature.toFixed(1);
+      }
+      if (data.air_temperature) {
+        document.getElementById('headerAirTemp').innerText = `${data.air_temperature.toFixed(1)}°C`;
+        document.getElementById('rcAirTemp').value = data.air_temperature.toFixed(1);
+      }
+
+      // Update LERP Targets & Driver Map
+      data.drivers.forEach(d => {
+        const existing = lerpDriversMap.get(d.driver_number);
+        if (!existing) {
+          lerpDriversMap.set(d.driver_number, {
+            driver_number: d.driver_number,
+            tla: d.tla,
+            team: d.team,
+            position: d.position,
+            gap: d.gap,
+            interval: d.interval,
+            compound: d.compound,
+            tyre_age: d.tyre_age,
+            currentX: d.x,
+            currentY: d.y,
+            targetX: d.x,
+            targetY: d.y
+          });
+        } else {
+          existing.position = d.position;
+          existing.gap = d.gap;
+          existing.interval = d.interval;
+          existing.compound = d.compound;
+          existing.tyre_age = d.tyre_age;
+          existing.targetX = d.x;
+          existing.targetY = d.y;
+        }
+      });
+
+      renderTimingTowerTable();
+    }
+
+    // Render Filtered 22-Driver Timing Tower
+    function renderTimingTowerTable() {
+      const tbody = document.getElementById('timingTowerBody');
+      tbody.innerHTML = '';
+
+      const drivers = Array.from(lerpDriversMap.values());
+      drivers.sort((a, b) => a.position - b.position);
+
+      drivers.forEach(d => {
+        const tr = document.createElement('tr');
+        if (d.driver_number === followedDriverNo) tr.className = 'followed-row';
+
+        tr.onclick = (e) => selectFollowedDriver(d.driver_number, d.tla, d.compound, d.tyre_age, e);
+
+        const compClass = `comp-${d.compound.toLowerCase()}`;
+
+        tr.innerHTML = `
+          <td>P${d.position}</td>
+          <td>${d.driver_number}</td>
+          <td><strong>${d.tla}</strong></td>
+          <td>${d.gap}</td>
+          <td>${d.interval}</td>
+          <td><span class="compound-tag ${compClass}">${d.compound.substring(0, 4)}</span></td>
+          <td>${d.tyre_age}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function selectFollowedDriver(dNo, tla, compound, age, evt) {
+      followedDriverNo = dNo;
+      document.getElementById('followedDriverBadge').innerText = `#${dNo} ${tla}`;
+      document.getElementById('telemetryDriverNo').value = dNo;
+
+      document.getElementById('tireSelect').value = compound.charAt(0).toUpperCase() + compound.slice(1).toLowerCase();
+      document.getElementById('tireAgeInput').value = age;
+
+      document.querySelectorAll('#timingTowerBody tr').forEach(row => row.classList.remove('followed-row'));
+      if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('followed-row');
+      }
+
+      runSimulation();
     }
 
     // Landing Page OpenF1 Accordion Ingestion
@@ -1256,148 +1366,6 @@
         banner.innerHTML = '<span>🔴 LIVE FORMULA 1 SESSION ACTIVE</span> <span>EXPAND GRAND PRIX TO LAUNCH DIGITAL TWIN</span>';
       } else {
         banner.className = 'hidden';
-      }
-    }
-
-    // Live Deduplicated Timing Tower Ingestion & State Map
-    async function fetchLiveTimingTower(sessionKey) {
-      try {
-        const [posResp, intResp, stintResp] = await Promise.all([
-          fetch(`/api/openf1/position?session_key=${sessionKey}`),
-          fetch(`/api/openf1/intervals?session_key=${sessionKey}`),
-          fetch(`/api/openf1/stints?session_key=${sessionKey}`)
-        ]);
-
-        const positions = posResp.ok ? await posResp.json() : [];
-        const intervals = intResp.ok ? await intResp.json() : [];
-        const stints = stintResp.ok ? await stintResp.json() : [];
-
-        // Update in-memory driverStateMap
-        positions.forEach(p => {
-          const existing = driverStateMap.get(p.driver_number) || {};
-          driverStateMap.set(p.driver_number, {
-            ...existing,
-            driver_number: p.driver_number,
-            position: p.position
-          });
-        });
-
-        intervals.forEach(i => {
-          const existing = driverStateMap.get(i.driver_number) || {};
-          driverStateMap.set(i.driver_number, {
-            ...existing,
-            gap_to_leader: i.gap_to_leader,
-            interval: i.interval
-          });
-        });
-
-        stints.forEach(s => {
-          const existing = driverStateMap.get(s.driver_number) || {};
-          driverStateMap.set(s.driver_number, {
-            ...existing,
-            compound: s.compound,
-            tyre_age_at_start: s.tyre_age_at_start
-          });
-        });
-
-        const uniqueDrivers = Array.from(driverStateMap.values());
-        uniqueDrivers.sort((a, b) => (a.position || 99) - (b.position || 99));
-
-        renderTimingTowerTable(uniqueDrivers);
-      } catch (e) {
-        console.error("Failed to fetch timing tower data", e);
-      }
-    }
-
-    function renderTimingTowerTable(drivers) {
-      const tbody = document.getElementById('timingTowerBody');
-      tbody.innerHTML = '';
-
-      drivers.forEach(d => {
-        const dNo = d.driver_number;
-        const dName = DRIVER_NAMES[dNo] || `D${dNo}`;
-        const pos = d.position || 1;
-
-        const gapStr = pos === 1 ? 'LEADER' : (d.gap_to_leader !== undefined ? `+${d.gap_to_leader.toFixed(3)}s` : '+2.140s');
-        const intStr = pos === 1 ? '-' : (d.interval !== undefined ? `+${d.interval.toFixed(3)}s` : '+0.500s');
-
-        const compound = d.compound || "MEDIUM";
-        const compClass = `comp-${compound.toLowerCase()}`;
-
-        const tr = document.createElement('tr');
-        if (dNo === followedDriverNo) tr.className = 'followed-row';
-
-        tr.onclick = (e) => selectFollowedDriver(dNo, dName, compound, d.tyre_age_at_start || 15, e);
-
-        tr.innerHTML = `
-          <td>P${pos}</td>
-          <td>${dNo}</td>
-          <td><strong>${dName}</strong></td>
-          <td>${gapStr}</td>
-          <td>${intStr}</td>
-          <td><span class="compound-tag ${compClass}">${compound.substring(0, 4)}</span></td>
-          <td>${d.tyre_age_at_start || 15}</td>
-        `;
-
-        tbody.appendChild(tr);
-      });
-    }
-
-    function selectFollowedDriver(dNo, dName, compound, age, evt) {
-      followedDriverNo = dNo;
-      document.getElementById('followedDriverBadge').innerText = `#${dNo} ${dName}`;
-      document.getElementById('telemetryDriverNo').value = dNo;
-
-      document.getElementById('tireSelect').value = compound.charAt(0).toUpperCase() + compound.slice(1).toLowerCase();
-      document.getElementById('tireAgeInput').value = age;
-
-      radarEngine.setFollowedDriver(dNo);
-
-      document.querySelectorAll('#timingTowerBody tr').forEach(row => row.classList.remove('followed-row'));
-      if (evt && evt.currentTarget) {
-        evt.currentTarget.classList.add('followed-row');
-      }
-
-      runSimulation();
-    }
-
-    // Fetch Live Environment, Flags & Weather
-    async function fetchLiveEnvironmentAndWeather(sessionKey) {
-      try {
-        const [rcResp, wResp] = await Promise.all([
-          fetch(`/api/openf1/race_control?session_key=${sessionKey}`),
-          fetch(`/api/openf1/weather?session_key=${sessionKey}`)
-        ]);
-
-        const rcData = rcResp.ok ? await rcResp.json() : [];
-        const wData = wResp.ok ? await wResp.json() : [];
-
-        if (rcData.length > 0) {
-          const lastRC = rcData[rcData.length - 1];
-          const flag = lastRC.flag || "GREEN";
-          document.getElementById('rcFlagDisplay').value = `${flag} - ${lastRC.message || 'CLEAR'}`;
-          
-          let env = "Green";
-          if (flag === "SAFETY CAR") env = "SafetyCar";
-          else if (flag === "VSC") env = "VirtualSafetyCar";
-          else if (flag === "YELLOW") env = "Yellow";
-
-          document.getElementById('envSelect').value = env;
-          
-          const badge = document.getElementById('statusBadge');
-          badge.className = `status-badge status-${env.toLowerCase()}`;
-          badge.innerText = `TRACK STATUS: ${env.toUpperCase()}`;
-        }
-
-        if (wData.length > 0) {
-          const w = wData[wData.length - 1];
-          document.getElementById('headerTrackTemp').innerText = `${w.track_temperature.toFixed(1)}°C`;
-          document.getElementById('headerAirTemp').innerText = `${w.air_temperature.toFixed(1)}°C`;
-          document.getElementById('rcTrackTemp').value = w.track_temperature.toFixed(1);
-          document.getElementById('rcAirTemp').value = w.air_temperature.toFixed(1);
-        }
-      } catch (e) {
-        console.error("Failed to fetch environment & weather", e);
       }
     }
 
@@ -1567,8 +1535,6 @@
 
     window.addEventListener('resize', () => {
       radarEngine.rebuildPath2D();
-      radarEngine.render();
-      if (circularRingEngine) circularRingEngine.render();
       renderTelemetryCanvas();
     });
 

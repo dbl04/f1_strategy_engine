@@ -32,6 +32,7 @@ use crate::domain::{
         openf1::get_openf1_stints,
         openf1::get_openf1_race_control,
         openf1::get_openf1_weather,
+        openf1::get_live_state,
         openf1::replay_openf1_state,
     ),
     components(schemas(
@@ -59,6 +60,8 @@ use crate::domain::{
         openf1::OpenF1Stint,
         openf1::OpenF1RaceControl,
         openf1::OpenF1Weather,
+        openf1::LiveDriverState,
+        openf1::LiveStateResponse,
         openf1::ReplayStateRequest,
     )),
     tags(
@@ -95,6 +98,7 @@ pub fn create_router() -> Router {
             get(openf1::get_openf1_race_control),
         )
         .route("/api/openf1/weather", get(openf1::get_openf1_weather))
+        .route("/api/live-state/{session_key}", get(openf1::get_live_state))
         .route(
             "/api/openf1/replay-state",
             post(openf1::replay_openf1_state),
