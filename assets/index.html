@@ -822,17 +822,28 @@
       27: '#52E252', 5: '#52E252', 22: '#6692FF', 30: '#6692FF',
     };
 
-    // 1. 2D Circuit Map Engine (Pure Cartesian X, Y Scaling - Zero Sin/Cos Warping)
+    // Universal Projection Function for normalized 0.0 - 1.0 coordinates
+    // Pure linear scaling - ZERO trig. driver.x * usableSize only.
+    function project(nx, ny, canvasWidth, canvasHeight) {
+        const padding = Math.min(canvasWidth, canvasHeight) * 0.05;
+        const usableSize = Math.min(canvasWidth, canvasHeight) - (padding * 2);
+
+        const offsetX = (canvasWidth - usableSize) / 2;
+        const offsetY = (canvasHeight - usableSize) / 2;
+
+        return {
+            cx: offsetX + (nx * usableSize),
+            cy: canvasHeight - (offsetY + (ny * usableSize))
+        };
+    }
+
+    // 1. 2D Circuit Map Engine (Baked 0.0 - 1.0 Normalized Coordinates)
     class OpenF1RadarEngine {
       constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
         this.cachedPath2D = null;
         this.refCoords = [];
-        this.bounds = null;
-        this.scale = 1.0;
-        this.offsetX = 0;
-        this.offsetY = 0;
       }
 
       async loadReferenceLapMap(sessionKey) {
@@ -841,29 +852,23 @@
         refTrackPoints = [];
 
         try {
-          // Query backend proxy route (never direct openf1)
-          const resp = await fetch(`/api/openf1/location?session_key=${sessionKey}`);
+          const resp = await fetch(`/api/track/${sessionKey}`);
           if (resp.ok) {
-            const locs = await resp.json();
-            const rawCoords = locs
-              .filter(l => (l.x !== 0 || l.y !== 0) && Math.abs(l.x) < 100000 && Math.abs(l.y) < 100000)
-              .map(l => ({ x: l.x, y: l.y }));
+            const bakedTrack = await resp.json();
+            if (Array.isArray(bakedTrack) && bakedTrack.length > 0) {
+              this.refCoords = bakedTrack;
 
-            if (rawCoords.length > 0) {
-              this.refCoords = rawCoords;
-
-              // Calculate cumulative polyline distances & normalized progress (0.0 to 1.0)
               let totalDist = 0;
               const pointsWithDist = [];
-              for (let i = 0; i < rawCoords.length; i++) {
+              for (let i = 0; i < bakedTrack.length; i++) {
                 if (i === 0) {
-                  pointsWithDist.push({ x: rawCoords[0].x, y: rawCoords[0].y, dist: 0 });
+                  pointsWithDist.push({ x: bakedTrack[0].x, y: bakedTrack[0].y, dist: 0 });
                 } else {
-                  const dx = rawCoords[i].x - rawCoords[i - 1].x;
-                  const dy = rawCoords[i].y - rawCoords[i - 1].y;
+                  const dx = bakedTrack[i].x - bakedTrack[i - 1].x;
+                  const dy = bakedTrack[i].y - bakedTrack[i - 1].y;
                   const segDist = Math.sqrt(dx * dx + dy * dy);
                   totalDist += segDist;
-                  pointsWithDist.push({ x: rawCoords[i].x, y: rawCoords[i].y, dist: totalDist });
+                  pointsWithDist.push({ x: bakedTrack[i].x, y: bakedTrack[i].y, dist: totalDist });
                 }
               }
 
@@ -875,57 +880,33 @@
                 progress: pt.dist / totalLapDist
               }));
 
-              this.calculateBounds();
               this.rebuildPath2D();
             }
           }
         } catch (e) {
-          console.error("Failed to load reference lap map", e);
+          console.error("Failed to load baked track map", e);
         }
         this.render();
       }
 
-      calculateBounds() {
-        if (this.refCoords.length === 0) return;
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        this.refCoords.forEach(c => {
-          if (c.x < minX) minX = c.x;
-          if (c.x > maxX) maxX = c.x;
-          if (c.y < minY) minY = c.y;
-          if (c.y > maxY) maxY = c.y;
-        });
-        this.bounds = { minX, maxX, minY, maxY };
-      }
-
-      projectLocation(x, y) {
-        if (!this.bounds || !this.canvas) return { cx: 0, cy: 0 };
-        const { minX, maxX, minY, maxY } = this.bounds;
-        const padding = 25;
-        const scaleX = (this.canvas.width - padding * 2) / (maxX - minX || 1);
-        const scaleY = (this.canvas.height - padding * 2) / (maxY - minY || 1);
-        const globalScale = Math.min(scaleX, scaleY);
-
-        const offsetX = (this.canvas.width - (maxX - minX) * globalScale) / 2;
-        const offsetY = (this.canvas.height - (maxY - minY) * globalScale) / 2;
-
-        return {
-          cx: offsetX + (x - minX) * globalScale,
-          cy: this.canvas.height - (offsetY + (y - minY) * globalScale)
-        };
+      projectLocation(nx, ny) {
+        if (!this.canvas) return { cx: 0, cy: 0 };
+        return project(nx, ny, this.canvas.width, this.canvas.height);
       }
 
       rebuildPath2D() {
-        if (!this.canvas || !this.bounds || this.refCoords.length === 0) return;
+        if (!this.canvas || this.refCoords.length === 0) return;
         
         this.canvas.width = this.canvas.parentElement.clientWidth;
         this.canvas.height = this.canvas.parentElement.clientHeight;
 
         const path = new Path2D();
         this.refCoords.forEach((c, idx) => {
-          const { cx, cy } = this.projectLocation(c.x, c.y);
+          const { cx, cy } = project(c.x, c.y, this.canvas.width, this.canvas.height);
           if (idx === 0) path.moveTo(cx, cy);
           else path.lineTo(cx, cy);
         });
+        path.closePath();
 
         this.cachedPath2D = path;
       }
@@ -943,8 +924,8 @@
         ctx.fillStyle = '#020204';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // Draw track outline if available
         if (this.cachedPath2D) {
-          // STRICT STROKE ONLY - ZERO FILL CALLS
           ctx.strokeStyle = '#222233';
           ctx.lineWidth = 6;
           ctx.stroke(this.cachedPath2D);
@@ -952,37 +933,40 @@
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 2;
           ctx.stroke(this.cachedPath2D);
-        } else {
-          ctx.fillStyle = '#333344';
-          ctx.font = '12px JetBrains Mono';
-          ctx.fillText('FETCHING OPENF1 REFERENCE LAP X/Y GEOMETRY...', 20, 30);
-          return;
         }
 
-        if (!this.bounds) return;
+        // Calculate canvas scale ONCE per frame (5% padding)
+        const padding = Math.min(this.canvas.width, this.canvas.height) * 0.05;
+        const usableSize = Math.min(this.canvas.width, this.canvas.height) - (padding * 2);
+        const offsetX = (this.canvas.width - usableSize) / 2;
+        const offsetY = (this.canvas.height - usableSize) / 2;
 
-        // Render LERP Interpolated Drivers using the exact same projectLocation function
+        // Render drivers using FORCED 2D CARTESIAN PROJECTION
+        // Pure linear: driver.x * usableSize. ZERO Math.cos/Math.sin.
         lerpDriversMap.forEach(driver => {
-          const { cx, cy } = this.projectLocation(driver.currentX, driver.currentY);
+          // Scale the 0.0-1.0 coordinate to the usable canvas size
+          const px = offsetX + (driver.currentX * usableSize);
+          // INVERT Y axis: Cartesian Y goes UP, Canvas Y goes DOWN
+          const py = this.canvas.height - (offsetY + (driver.currentY * usableSize));
 
           const isFollowed = (followedDriverNo === driver.driver_number);
           const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
 
           if (isFollowed) {
             ctx.beginPath();
-            ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+            ctx.arc(px, py, 14, 0, Math.PI * 2);
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+            ctx.arc(px, py, 10, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
             ctx.fill();
           }
 
           ctx.beginPath();
-          ctx.arc(cx, cy, isFollowed ? 7 : 5, 0, Math.PI * 2);
+          ctx.arc(px, py, isFollowed ? 7 : 5, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
           ctx.strokeStyle = '#000000';
@@ -991,12 +975,12 @@
 
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 9px JetBrains Mono';
-          ctx.fillText(`${driver.tla}`, cx + 7, cy + 3);
+          ctx.fillText(`${driver.tla}`, px + 7, py + 3);
         });
       }
     }
 
-    // 2. Circular Lap Ring Radar Engine (Pure Polar Trigonometry Progress Circle)
+    // 2. Alternate Circuit Map View (Same forced Cartesian projection, different styling)
     class CircularRingEngine {
       constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -1012,50 +996,42 @@
 
         const width = this.canvas.width;
         const height = this.canvas.height;
-        const cx = width / 2;
-        const cy = height / 2;
-        const radius = Math.min(width, height) * 0.35;
 
         ctx.fillStyle = '#020204';
         ctx.fillRect(0, 0, width, height);
 
-        // Circular progress track
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#222233';
-        ctx.lineWidth = 10;
-        ctx.stroke();
+        // Draw baked track outline if the radar engine has it
+        if (radarEngine && radarEngine.cachedPath2D) {
+          // Rebuild path for this canvas size
+          const path = new Path2D();
+          radarEngine.refCoords.forEach((c, idx) => {
+            const { cx, cy } = project(c.x, c.y, width, height);
+            if (idx === 0) path.moveTo(cx, cy);
+            else path.lineTo(cx, cy);
+          });
+          path.closePath();
 
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#444455';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+          ctx.strokeStyle = '#222233';
+          ctx.lineWidth = 10;
+          ctx.stroke(path);
 
-        // 12 o'clock Start / Finish Line
-        const sfY1 = cy - radius - 12;
-        const sfY2 = cy - radius + 12;
-        ctx.beginPath();
-        ctx.moveTo(cx, sfY1);
-        ctx.lineTo(cx, sfY2);
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.fillStyle = '#ef4444';
-        ctx.font = 'bold 9px JetBrains Mono';
-        ctx.fillText('FINISH', cx - 18, sfY1 - 4);
+          ctx.strokeStyle = '#444455';
+          ctx.lineWidth = 2;
+          ctx.stroke(path);
+        }
 
         const drivers = Array.from(lerpDriversMap.values());
         if (drivers.length === 0) return;
 
-        // Plot drivers radially around circumference based on true telemetry progress
-        drivers.forEach(driver => {
-          const progress = getLapProgressForCoords(driver.currentX, driver.currentY);
-          const angle = (progress * 2 * Math.PI) - (Math.PI / 2);
+        // 5% padding, forced Cartesian projection - ZERO Math.cos/Math.sin
+        const padding = Math.min(width, height) * 0.05;
+        const usableSize = Math.min(width, height) - (padding * 2);
+        const offsetX = (width - usableSize) / 2;
+        const offsetY = (height - usableSize) / 2;
 
-          const px = cx + Math.cos(angle) * radius;
-          const py = cy + Math.sin(angle) * radius;
+        drivers.forEach(driver => {
+          const px = offsetX + (driver.currentX * usableSize);
+          const py = height - (offsetY + (driver.currentY * usableSize));
 
           const isFollowed = (followedDriverNo === driver.driver_number);
           const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
@@ -1076,13 +1052,9 @@
           ctx.lineWidth = 1;
           ctx.stroke();
 
-          const labelDist = radius + (isFollowed ? 22 : 16);
-          const lx = cx + Math.cos(angle) * labelDist;
-          const ly = cy + Math.sin(angle) * labelDist;
-
           ctx.fillStyle = isFollowed ? '#a855f7' : '#ffffff';
           ctx.font = isFollowed ? 'bold 10px JetBrains Mono' : '9px JetBrains Mono';
-          ctx.fillText(`${driver.tla}`, lx - 10, ly + 3);
+          ctx.fillText(`${driver.tla}`, px + 9, py + 3);
         });
       }
     }

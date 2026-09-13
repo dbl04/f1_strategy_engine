@@ -33,6 +33,7 @@ use crate::domain::{
         openf1::get_openf1_race_control,
         openf1::get_openf1_weather,
         openf1::get_live_state,
+        openf1::get_baked_track,
         openf1::replay_openf1_state,
     ),
     components(schemas(
@@ -55,6 +56,7 @@ use crate::domain::{
         openf1::OpenF1Lap,
         openf1::OpenF1CarData,
         openf1::OpenF1Location,
+        openf1::NormalizedTrackPoint,
         openf1::OpenF1Position,
         openf1::OpenF1Interval,
         openf1::OpenF1Stint,
@@ -80,6 +82,7 @@ pub fn create_router() -> Router {
             "/api/circuit-geometry/{track_id}",
             get(tracks::get_circuit_geometry_by_id),
         )
+        .route("/api/track/{session_key}", get(openf1::get_baked_track))
         .route("/api/openf1/sessions", get(openf1::get_openf1_sessions))
         .route(
             "/api/openf1/laps/{session_key}/{driver_number}",
@@ -105,3 +108,4 @@ pub fn create_router() -> Router {
         )
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }
+

@@ -99,3 +99,25 @@ async fn test_circuit_geometry_by_id_endpoint() {
         .unwrap();
     assert!(!body.is_empty());
 }
+
+#[tokio::test]
+async fn test_baked_track_endpoint() {
+    let app = create_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/track/9161")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    assert!(!body.is_empty());
+}
+

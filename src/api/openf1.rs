@@ -11,6 +11,12 @@ use utoipa::{IntoParams, ToSchema};
 use crate::domain::{CompetitorCar, EgoCar, RaceState, TireCompound, TrackParameters, TrackStatus};
 use crate::error::AppError;
 
+static FALLBACK_TRACK_JSON: &str = include_str!("../../assets/debug/clean_spike_location.json");
+
+pub fn get_fallback_track_points() -> Vec<NormalizedTrackPoint> {
+    serde_json::from_str(FALLBACK_TRACK_JSON).unwrap_or_default()
+}
+
 /// Query parameters for fetching OpenF1 sessions.
 #[derive(Deserialize, Serialize, Debug, Clone, IntoParams)]
 pub struct SessionQueryParams {
@@ -100,6 +106,14 @@ pub struct OpenF1Location {
     #[serde(default)]
     pub date: Option<String>,
 }
+
+/// Baked normalized track geometry point (0.0 - 1.0 scale).
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct NormalizedTrackPoint {
+    pub x: f64,
+    pub y: f64,
+}
+
 
 /// OpenF1 Position model.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
@@ -394,6 +408,81 @@ impl OpenF1Client {
         Ok(res)
     }
 
+    pub async fn get_baked_track(
+        &self,
+        session_key: u64,
+    ) -> Result<Vec<NormalizedTrackPoint>, AppError> {
+        let mut raw_locations: Vec<OpenF1Location> = Vec::new();
+
+        // Attempt to fetch a reference lap from OpenF1
+        for d_no in [63, 1, 4, 16] {
+            let laps = self.get_laps(session_key, d_no).await.unwrap_or_default();
+            if let Some(valid_lap) = laps.iter().find(|l| {
+                l.date_start.is_some() && l.lap_duration.map(|d| d > 40.0).unwrap_or(false)
+            }) {
+                if let Some(ref start) = valid_lap.date_start {
+                    let end_str = match valid_lap.lap_duration {
+                        Some(dur) => {
+                            if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(start) {
+                                let end_time = parsed
+                                    + chrono::Duration::milliseconds((dur * 1000.0) as i64);
+                                Some(end_time.to_rfc3339())
+                            } else {
+                                None
+                            }
+                        }
+                        None => None,
+                    };
+
+                    let mut url = format!(
+                        "https://api.openf1.org/v1/location?session_key={}&driver_number={}&date>={}",
+                        session_key, d_no, start
+                    );
+                    if let Some(ref end) = end_str {
+                        url.push_str(&format!("&date<={}", end));
+                    }
+                    if let Ok(resp) = reqwest::get(&url).await {
+                        if let Ok(locs) = resp.json::<Vec<OpenF1Location>>().await {
+                            if locs.len() > 50 {
+                                raw_locations = locs;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let clean_locs: Vec<&OpenF1Location> = raw_locations
+            .iter()
+            .filter(|l| !(l.x == 0.0 && l.y == 0.0))
+            .collect();
+
+        if clean_locs.is_empty() {
+            return Ok(get_fallback_track_points());
+        }
+
+        let min_x = clean_locs.iter().map(|l| l.x).fold(f64::INFINITY, f64::min);
+        let max_x = clean_locs.iter().map(|l| l.x).fold(f64::NEG_INFINITY, f64::max);
+        let min_y = clean_locs.iter().map(|l| l.y).fold(f64::INFINITY, f64::min);
+        let max_y = clean_locs.iter().map(|l| l.y).fold(f64::NEG_INFINITY, f64::max);
+
+        let width = max_x - min_x;
+        let height = max_y - min_y;
+        let scale = width.max(height);
+        let scale = if scale > 0.0 { scale } else { 1.0 };
+
+        let normalized = clean_locs
+            .iter()
+            .map(|l| NormalizedTrackPoint {
+                x: (l.x - min_x) / scale,
+                y: (l.y - min_y) / scale,
+            })
+            .collect();
+
+        Ok(normalized)
+    }
+
     pub async fn get_live_state(&self, session_key: u64) -> Result<LiveStateResponse, AppError> {
         let positions = self.get_positions(session_key).await.unwrap_or_default();
         let intervals = self.get_intervals(session_key).await.unwrap_or_default();
@@ -414,6 +503,31 @@ impl OpenF1Client {
             .last()
             .map(|w| (w.track_temperature, w.air_temperature))
             .unwrap_or((38.4, 24.1));
+
+        let clean_locs: Vec<&OpenF1Location> = locations
+            .iter()
+            .filter(|l| !(l.x == 0.0 && l.y == 0.0))
+            .collect();
+
+        let is_already_normalized = !clean_locs.is_empty()
+            && clean_locs
+                .iter()
+                .all(|l| l.x >= 0.0 && l.x <= 1.0 && l.y >= 0.0 && l.y <= 1.0);
+
+        let (min_x, min_y, scale) = if is_already_normalized {
+            (0.0, 0.0, 1.0)
+        } else if !clean_locs.is_empty() {
+            let min_x = clean_locs.iter().map(|l| l.x).fold(f64::INFINITY, f64::min);
+            let max_x = clean_locs.iter().map(|l| l.x).fold(f64::NEG_INFINITY, f64::max);
+            let min_y = clean_locs.iter().map(|l| l.y).fold(f64::INFINITY, f64::min);
+            let max_y = clean_locs.iter().map(|l| l.y).fold(f64::NEG_INFINITY, f64::max);
+            let w = max_x - min_x;
+            let h = max_y - min_y;
+            let s = w.max(h);
+            (min_x, min_y, if s > 0.0 { s } else { 1.0 })
+        } else {
+            (0.0, 0.0, 1.0)
+        };
 
         let valid_drivers = [
             (1, "VER", "Red Bull"),
@@ -469,7 +583,14 @@ impl OpenF1Client {
                     .unwrap_or_else(|| "+0.500s".to_string())
             };
 
-            let (x, y) = loc_obj.map(|l| (l.x, l.y)).unwrap_or((0.0, 0.0));
+            let (x, y) = match loc_obj {
+                Some(l) if !(l.x == 0.0 && l.y == 0.0) => (
+                    (l.x - min_x) / scale,
+                    (l.y - min_y) / scale,
+                ),
+                _ => (0.0, 0.0),
+            };
+
             let compound = stint_obj
                 .map(|s| s.compound.clone())
                 .unwrap_or_else(|| "MEDIUM".to_string());
@@ -608,18 +729,26 @@ fn generate_fallback_driver_locations(session_key: u64) -> Vec<OpenF1Location> {
         .map(|d| d.as_millis() as f64)
         .unwrap_or(0.0);
 
+    let track_points = get_fallback_track_points();
+    if track_points.is_empty() {
+        return vec![];
+    }
+    let total_pts = track_points.len();
+
     drivers
         .iter()
         .enumerate()
         .map(|(idx, &driver_number)| {
-            let offset = (idx as f64) * 0.28 + (now_millis * 0.0003);
-            let x = 1000.0 + (offset.sin() * 850.0);
-            let y = 1000.0 + (offset.cos() * 650.0);
+            let spacing = total_pts as f64 / drivers.len() as f64;
+            let progress_offset = (now_millis * 0.005) as usize;
+            let pt_idx = ((idx as f64 * spacing) as usize + progress_offset) % total_pts;
+            let pt = &track_points[pt_idx];
+
             OpenF1Location {
                 session_key,
                 driver_number,
-                x,
-                y,
+                x: pt.x,
+                y: pt.y,
                 z: Some(10.0),
                 date: Some("2026-03-15T05:15:00+00:00".to_string()),
             }
@@ -1002,6 +1131,26 @@ pub async fn get_live_state(
     let state = client.get_live_state(session_key).await?;
     Ok(Json(state))
 }
+
+/// Handler serving `GET /api/track/:session_key`.
+#[utoipa::path(
+    get,
+    path = "/api/track/{session_key}",
+    params(
+        ("session_key" = u64, Path, description = "OpenF1 Session Key")
+    ),
+    responses(
+        (status = 200, description = "Baked normalized track geometry points (0.0 - 1.0 scale)", body = Vec<NormalizedTrackPoint>)
+    )
+)]
+pub async fn get_baked_track(
+    Path(session_key): Path<u64>,
+) -> Result<Json<Vec<NormalizedTrackPoint>>, AppError> {
+    let client = OpenF1Client::new();
+    let track = client.get_baked_track(session_key).await?;
+    Ok(Json(track))
+}
+
 
 /// Request payload for replaying OpenF1 telemetry into a simulation `RaceState`.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
