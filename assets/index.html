@@ -49,10 +49,26 @@
       font-size: 12px;
       line-height: 1.3;
       height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Views */
+    .app-view {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
       overflow: hidden;
     }
 
-    /* Top Navigation Header */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Header Bar */
     header {
       display: flex;
       justify-content: space-between;
@@ -60,12 +76,13 @@
       background-color: var(--bg-panel);
       border-bottom: 1px solid var(--border-dark);
       padding: 6px 16px;
-      height: 38px;
+      height: 40px;
+      flex-shrink: 0;
     }
 
     .brand-title {
       font-weight: 800;
-      font-size: 14px;
+      font-size: 13px;
       letter-spacing: 1px;
       color: var(--text-main);
       display: flex;
@@ -80,10 +97,29 @@
       font-size: 11px;
     }
 
+    .nav-btn {
+      background: #111116;
+      border: 1px solid var(--border-light);
+      color: var(--text-main);
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--color-purple);
+      color: var(--color-purple);
+    }
+
     .header-metrics {
       display: flex;
-      gap: 20px;
+      gap: 18px;
       align-items: center;
+      font-size: 11px;
     }
 
     .status-badge {
@@ -100,12 +136,131 @@
     .status-vsc { color: var(--color-yellow); border-color: var(--color-yellow); }
     .status-red { color: #fff; background: var(--color-red); font-weight: 800; }
 
-    /* Main Multi-Panel Layout */
+    /* VIEW 1: LANDING PAGE */
+    #landingView {
+      background-color: var(--bg-black);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .landing-header {
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-dark);
+      padding-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .landing-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: 1px;
+    }
+
+    .landing-subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .live-session-banner {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--color-red);
+      color: var(--color-red);
+      padding: 10px 16px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: pulse 1s infinite alternate;
+    }
+
+    .session-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .session-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dark);
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .session-card:hover {
+      border-color: var(--color-purple);
+    }
+
+    .session-card.is-live {
+      border-color: var(--color-red);
+      background: #0d0505;
+    }
+
+    .session-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .round-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      padding: 2px 6px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .live-tag {
+      background: var(--color-red);
+      color: #fff;
+      font-weight: 800;
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+
+    .session-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .session-circuit {
+      font-size: 11px;
+      color: var(--color-purple);
+      margin-bottom: 10px;
+    }
+
+    .session-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid #111118;
+      padding-top: 8px;
+    }
+
+    /* VIEW 2: PIT WALL DASHBOARD */
+    #dashboardView {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
     main {
       display: grid;
-      grid-template-columns: 340px 1fr 380px;
-      height: calc(100vh - 38px);
+      grid-template-columns: 350px 1fr 400px;
+      height: calc(100vh - 40px);
       background-color: var(--bg-black);
+      overflow: hidden;
     }
 
     .panel {
@@ -113,6 +268,7 @@
       border-right: 1px solid var(--border-dark);
       display: flex;
       flex-direction: column;
+      height: 100%;
       overflow: hidden;
     }
 
@@ -123,7 +279,7 @@
     .panel-header {
       background: var(--bg-surface);
       border-bottom: 1px solid var(--border-dark);
-      padding: 6px 12px;
+      padding: 8px 12px;
       font-weight: 700;
       font-size: 11px;
       letter-spacing: 0.8px;
@@ -132,6 +288,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .panel-content {
@@ -140,7 +297,12 @@
       overflow-y: auto;
     }
 
-    /* Tabular Timing Tower */
+    /* Timing Tower Table */
+    .tower-scroll-container {
+      flex: 1;
+      overflow-y: auto;
+    }
+
     .timing-table {
       width: 100%;
       border-collapse: collapse;
@@ -148,22 +310,25 @@
     }
 
     .timing-table th {
+      position: sticky;
+      top: 0;
       background: var(--bg-surface);
       color: var(--text-muted);
       text-align: left;
-      padding: 4px 6px;
+      padding: 5px 6px;
       border-bottom: 1px solid var(--border-dark);
       font-weight: 600;
+      z-index: 2;
     }
 
     .timing-table td {
-      padding: 4px 6px;
+      padding: 5px 6px;
       border-bottom: 1px solid #111116;
     }
 
     .timing-table tr.ego-row {
       background-color: rgba(168, 85, 247, 0.15);
-      border-left: 2px solid var(--color-purple);
+      border-left: 3px solid var(--color-purple);
     }
 
     .compound-tag {
@@ -177,11 +342,20 @@
     .comp-inter { color: var(--compound-inter); border: 1px solid var(--compound-inter); }
     .comp-wet { color: var(--compound-wet); border: 1px solid var(--compound-wet); }
 
-    /* Canvas Panels */
-    .canvas-container {
-      position: relative;
-      flex: 1;
+    /* Center Panel Grid (Map + Telemetry) */
+    .center-panel-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
       background: #020204;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      height: 60%;
+      position: relative;
+      background: #020204;
+      border-bottom: 1px solid var(--border-dark);
       display: flex;
       flex-direction: column;
     }
@@ -194,19 +368,64 @@
     }
 
     .telemetry-container {
-      height: 180px;
-      border-top: 1px solid var(--border-dark);
+      height: 40%;
       background: #050508;
-      position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
     #telemetryCanvas {
       width: 100%;
-      height: 100%;
+      flex: 1;
       display: block;
     }
 
-    /* Control Inputs & Form Controls */
+    /* Right Panel Tabs */
+    .tab-bar {
+      display: flex;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-dark);
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--border-dark);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 10px 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+
+    .tab-btn:last-child {
+      border-right: none;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-panel);
+      color: var(--color-purple);
+      border-bottom: 2px solid var(--color-purple);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 12px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Controls & Form Elements */
     .control-group {
       margin-bottom: 12px;
     }
@@ -230,7 +449,7 @@
       color: var(--text-main);
       font-family: var(--font-mono);
       font-size: 11px;
-      padding: 5px 8px;
+      padding: 6px 8px;
       width: 100%;
       outline: none;
     }
@@ -239,7 +458,7 @@
       border-color: var(--color-purple);
     }
 
-    button {
+    .action-btn {
       background: var(--color-purple);
       color: #000;
       font-weight: 700;
@@ -247,19 +466,19 @@
       border: none;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      padding: 8px;
-      margin-top: 6px;
+      padding: 9px;
+      margin-top: 8px;
     }
 
-    button:hover {
+    .action-btn:hover {
       background: #c084fc;
     }
 
-    /* Strategy & Monte Carlo Output Matrix */
+    /* Matrix Cards */
     .matrix-card {
       background: #07070a;
       border: 1px solid var(--border-dark);
-      padding: 8px;
+      padding: 10px;
       margin-bottom: 10px;
     }
 
@@ -279,33 +498,26 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
-      margin-top: 6px;
+      margin-top: 8px;
       font-size: 10px;
     }
 
     .stat-box {
       background: #0d0d12;
-      padding: 4px 6px;
+      padding: 5px 6px;
       border: 1px solid #181820;
     }
 
-    .stat-label {
-      color: var(--text-muted);
-    }
-
-    .stat-val {
-      font-weight: 700;
-      color: var(--text-main);
-      font-size: 11px;
-    }
+    .stat-label { color: var(--text-muted); }
+    .stat-val { font-weight: 700; color: var(--text-main); font-size: 11px; }
 
     .box-now-alert {
       background: var(--color-red);
       color: #fff;
       font-weight: 800;
       text-align: center;
-      padding: 6px;
-      margin-top: 8px;
+      padding: 8px;
+      margin-bottom: 12px;
       letter-spacing: 1px;
       animation: pulse 1s infinite alternate;
     }
@@ -318,199 +530,434 @@
 </head>
 <body>
 
-  <!-- Top Header Navigation -->
-  <header>
-    <div class="brand-title">
-      <span>PIT WALL</span> F1 STRATEGY & TELEMETRY ENGINE
-    </div>
-    <div class="header-metrics">
-      <div>TRACK TEMP: <span style="color: var(--color-yellow)">38.4°C</span></div>
-      <div>AIR TEMP: <span style="color: var(--color-cyan)">24.1°C</span></div>
-      <div>RUBBER EVOLUTION: <span style="color: var(--color-green)">OPTIMAL</span></div>
-      <div id="statusBadge" class="status-badge status-green">TRACK STATUS: GREEN</div>
-    </div>
-  </header>
+  <!-- VIEW 1: LANDING PAGE (2026 SESSION SELECTOR) -->
+  <div id="landingView" class="app-view">
+    <header>
+      <div class="brand-title">
+        <span>PIT WALL</span> F1 STRATEGY & TELEMETRY ENGINE — 2026 SEASON
+      </div>
+      <div class="header-metrics">
+        <div>STATUS: <span style="color: var(--color-green)">OPENF1 CONNECTED</span></div>
+      </div>
+    </header>
 
-  <main>
-    <!-- Left Panel: Timing Tower & Competitor Traffic -->
-    <div class="panel">
-      <div class="panel-header">
-        <span>TIMING & TRAFFIC TOWER</span>
-        <span>LAP <span id="currentLapDisplay">15</span>/53</span>
-      </div>
-      <div class="panel-content">
-        <table class="timing-table">
-          <thead>
-            <tr>
-              <th>POS</th>
-              <th>NO</th>
-              <th>DRIVER</th>
-              <th>TYRE</th>
-              <th>AGE</th>
-              <th>GAP</th>
-              <th>STOP</th>
-            </tr>
-          </thead>
-          <tbody id="timingTowerBody">
-            <tr class="ego-row">
-              <td>P1</td>
-              <td>1</td>
-              <td>VER (EGO)</td>
-              <td><span class="compound-tag comp-medium">MED</span></td>
-              <td>15</td>
-              <td>LEADER</td>
-              <td>0</td>
-            </tr>
-            <tr>
-              <td>P2</td>
-              <td>4</td>
-              <td>NOR</td>
-              <td><span class="compound-tag comp-medium">MED</span></td>
-              <td>15</td>
-              <td>+2.140s</td>
-              <td>0</td>
-            </tr>
-            <tr>
-              <td>P3</td>
-              <td>16</td>
-              <td>LEC</td>
-              <td><span class="compound-tag comp-hard">HARD</span></td>
-              <td>18</td>
-              <td>+5.812s</td>
-              <td>0</td>
-            </tr>
-            <tr>
-              <td>P4</td>
-              <td>81</td>
-              <td>PIA</td>
-              <td><span class="compound-tag comp-soft">SOFT</span></td>
-              <td>10</td>
-              <td>+12.450s</td>
-              <td>1</td>
-            </tr>
-            <tr>
-              <td>P5</td>
-              <td>63</td>
-              <td>RUS</td>
-              <td><span class="compound-tag comp-hard">HARD</span></td>
-              <td>20</td>
-              <td>+18.910s</td>
-              <td>0</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Center Panel: Raw Canvas Track Geometry & Telemetry Traces -->
-    <div class="panel canvas-container">
-      <div class="panel-header">
-        <span>2D VECTOR CIRCUIT RENDERER (IN-MEMORY GEOJSON)</span>
-        <span id="circuitNameDisplay">AUTODROMO NAZIONALE MONZA</span>
-      </div>
-      <canvas id="trackCanvas"></canvas>
-      
-      <div class="telemetry-container">
-        <div class="panel-header" style="background: transparent; border-bottom: 1px solid #1a1a22;">
-          <span>TELEMETRY TRACES (SPEED / THROTTLE / BRAKE)</span>
-          <span style="color: var(--color-cyan)">SERIES: LAP 15</span>
+    <div class="panel-content" style="padding: 24px;">
+      <div class="landing-header">
+        <div>
+          <div class="landing-title">2026 FORMULA 1 GRAND PRIX CALENDAR</div>
+          <div class="landing-subtitle">Select a session to initialize live vector track geometry and Rayon strategy optimizer</div>
         </div>
-        <canvas id="telemetryCanvas"></canvas>
+        <button class="nav-btn" onclick="fetchSessions()">🔄 REFRESH SESSIONS</button>
+      </div>
+
+      <div id="liveBanner" class="hidden"></div>
+
+      <div id="sessionGrid" class="session-grid">
+        <!-- Dynamic Session Cards -->
       </div>
     </div>
+  </div>
 
-    <!-- Right Panel: Monte Carlo Strategy Controls & Optimizer Matrix -->
-    <div class="panel">
-      <div class="panel-header">
-        <span>RAYON MONTE CARLO OPTIMIZER</span>
-        <span>5,000 RUNS</span>
+  <!-- VIEW 2: PIT WALL DASHBOARD (100VH TABBED INTERFACE) -->
+  <div id="dashboardView" class="app-view hidden">
+    <header>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <button class="nav-btn" onclick="showLandingView()">← RACE SELECT</button>
+        <div class="brand-title">
+          <span>PIT WALL</span> <span id="dashSessionTitle">MONZA GRAND PRIX</span>
+        </div>
       </div>
-      <div class="panel-content">
-        <!-- Input Form -->
-        <div class="control-group">
-          <label>Circuit Selection</label>
-          <select id="trackSelect" onchange="loadTrackGeometry()">
-            <option value="monza">Monza (Autodromo Nazionale Monza)</option>
-            <option value="silverstone">Silverstone Circuit</option>
-            <option value="spa">Circuit de Spa-Francorchamps</option>
-            <option value="monaco">Circuit de Monaco</option>
-            <option value="bahrain">Bahrain International Circuit</option>
-            <option value="suzuka">Suzuka Circuit</option>
-            <option value="cota">Circuit of the Americas</option>
-            <option value="singapore">Marina Bay Street Circuit</option>
-          </select>
+
+      <div class="header-metrics">
+        <div>TRACK TEMP: <span style="color: var(--color-yellow)">38.4°C</span></div>
+        <div>AIR TEMP: <span style="color: var(--color-cyan)">24.1°C</span></div>
+        <div>RUBBER: <span style="color: var(--color-green)">OPTIMAL</span></div>
+        <div id="statusBadge" class="status-badge status-green">TRACK STATUS: GREEN</div>
+      </div>
+    </header>
+
+    <main>
+      <!-- LEFT PANEL: 22-DRIVER TIMING TOWER -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>TIMING & TRAFFIC TOWER (22 DRIVERS)</span>
+          <span>LAP <span id="currentLapDisplay">15</span>/53</span>
+        </div>
+        <div class="tower-scroll-container">
+          <table class="timing-table">
+            <thead>
+              <tr>
+                <th>POS</th>
+                <th>NO</th>
+                <th>DRIVER</th>
+                <th>TYRE</th>
+                <th>AGE</th>
+                <th>GAP</th>
+                <th>STOP</th>
+              </tr>
+            </thead>
+            <tbody id="timingTowerBody">
+              <!-- Populated dynamically with 22 drivers -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CENTER PANEL: 2D VECTOR MAP (60%) & TELEMETRY TRACES (40%) -->
+      <div class="panel center-panel-wrapper">
+        <div class="canvas-container">
+          <div class="panel-header">
+            <span>2D VECTOR CIRCUIT RENDERER (LOCAL GEOJSON)</span>
+            <span id="circuitNameDisplay">AUTODROMO NAZIONALE MONZA</span>
+          </div>
+          <canvas id="trackCanvas"></canvas>
         </div>
 
-        <div class="control-group">
-          <div class="input-row">
-            <div>
-              <label>Current Lap</label>
-              <input type="number" id="currentLapInput" value="15" min="1" max="78" onchange="runSimulation()">
-            </div>
-            <div>
-              <label>Tire Age</label>
-              <input type="number" id="tireAgeInput" value="15" min="0" max="60" onchange="runSimulation()">
+        <div class="telemetry-container">
+          <div class="panel-header" style="background: transparent;">
+            <span>TELEMETRY TRACES (SPEED / THROTTLE / BRAKE)</span>
+            <span style="color: var(--color-cyan)">OPENF1 TRACE: LAP 15</span>
+          </div>
+          <canvas id="telemetryCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: TABBED CONTROLS -->
+      <div class="panel">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('tabStrategy')">OPTIMIZER</button>
+          <button class="tab-btn" onclick="switchTab('tabTelemetry')">TELEMETRY</button>
+          <button class="tab-btn" onclick="switchTab('tabRaceControl')">RACE CONTROL</button>
+        </div>
+
+        <!-- TAB 1: STRATEGY OPTIMIZER -->
+        <div id="tabStrategy" class="tab-content active">
+          <div class="control-group">
+            <label>Circuit Identifier</label>
+            <select id="trackSelect" onchange="onCircuitSelected()">
+              <option value="monza">Monza (Autodromo Nazionale Monza)</option>
+              <option value="silverstone">Silverstone Circuit</option>
+              <option value="spa">Circuit de Spa-Francorchamps</option>
+              <option value="monaco">Circuit de Monaco</option>
+              <option value="bahrain">Bahrain International Circuit</option>
+              <option value="suzuka">Suzuka Circuit</option>
+              <option value="cota">Circuit of the Americas</option>
+              <option value="singapore">Marina Bay Street Circuit</option>
+              <option value="melbourne">Melbourne (Albert Park)</option>
+              <option value="shanghai">Shanghai Circuit</option>
+              <option value="madrid">Madrid GP</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <div class="input-row">
+              <div>
+                <label>Current Lap</label>
+                <input type="number" id="currentLapInput" value="15" min="1" max="78" onchange="runSimulation()">
+              </div>
+              <div>
+                <label>Tire Age</label>
+                <input type="number" id="tireAgeInput" value="15" min="0" max="60" onchange="runSimulation()">
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="control-group">
-          <div class="input-row">
-            <div>
-              <label>Current Compound</label>
-              <select id="tireSelect" onchange="runSimulation()">
-                <option value="Medium">Medium</option>
-                <option value="Soft">Soft</option>
-                <option value="Hard">Hard</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Wet">Wet</option>
-              </select>
+          <div class="control-group">
+            <div class="input-row">
+              <div>
+                <label>Current Compound</label>
+                <select id="tireSelect" onchange="runSimulation()">
+                  <option value="Medium">Medium</option>
+                  <option value="Soft">Soft</option>
+                  <option value="Hard">Hard</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Wet">Wet</option>
+                </select>
+              </div>
+              <div>
+                <label>Track Status</label>
+                <select id="envSelect" onchange="runSimulation()">
+                  <option value="Green">Green Flag</option>
+                  <option value="SafetyCar">Safety Car (SC)</option>
+                  <option value="VirtualSafetyCar">Virtual Safety Car (VSC)</option>
+                  <option value="Yellow">Yellow Flag</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label>Track Status</label>
-              <select id="envSelect" onchange="runSimulation()">
-                <option value="Green">Green Flag</option>
-                <option value="SafetyCar">Safety Car (SC)</option>
-                <option value="VirtualSafetyCar">Virtual Safety Car (VSC)</option>
-                <option value="Yellow">Yellow Flag</option>
-              </select>
+          </div>
+
+          <div class="control-group">
+            <div class="input-row" style="margin-top: 4px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="wingDamage" style="width: auto;" onchange="runSimulation()"> Wing Damage (+10s)
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="mandatoryDone" style="width: auto;" checked onchange="runSimulation()"> Mandatory Stop Done
+              </label>
+            </div>
+          </div>
+
+          <button class="action-btn" onclick="runSimulation()">Run Parallel Monte Carlo Optimization</button>
+
+          <div id="alertBox" style="margin-top: 10px;"></div>
+
+          <div style="margin-top: 14px;">
+            <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
+              <span>PARALLEL MONTE CARLO MATRIX (5,000 RUNS)</span>
+            </div>
+            <div id="strategyResults">
+              <!-- Strategy Cards -->
             </div>
           </div>
         </div>
 
-        <div class="control-group">
-          <div class="input-row">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" id="wingDamage" style="width: auto;" onchange="runSimulation()"> Front Wing Damage (+10s)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" id="mandatoryDone" style="width: auto;" checked onchange="runSimulation()"> Mandatory Pit Done
-            </label>
+        <!-- TAB 2: TELEMETRY -->
+        <div id="tabTelemetry" class="tab-content">
+          <div class="control-group">
+            <label>Selected Session Key</label>
+            <input type="text" id="telemetrySessionKey" value="9000" readonly>
+          </div>
+
+          <div class="control-group">
+            <label>Target Driver</label>
+            <select id="telemetryDriver" onchange="fetchOpenF1Laps()">
+              <option value="1">#1 VER (Max Verstappen)</option>
+              <option value="4">#4 NOR (Lando Norris)</option>
+              <option value="16">#16 LEC (Charles Leclerc)</option>
+              <option value="81">#81 PIA (Oscar Piastri)</option>
+              <option value="44">#44 HAM (Lewis Hamilton)</option>
+            </select>
+          </div>
+
+          <button class="action-btn" onclick="replayOpenF1State()">Replay Telemetry to Engine State</button>
+
+          <div style="margin-top: 16px;">
+            <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
+              <span>LAP TELEMETRY TRACE SUMMARY</span>
+            </div>
+            <div class="matrix-card">
+              <div class="stat-grid">
+                <div class="stat-box">
+                  <div class="stat-label">TOP SPEED</div>
+                  <div class="stat-val" id="telemetryMaxSpeed">348.2 km/h</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">AVG THROTTLE</div>
+                  <div class="stat-val" style="color: var(--color-green)" id="telemetryAvgThrottle">78.4%</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">BRAKE HEAVY ZONES</div>
+                  <div class="stat-val" style="color: var(--color-red)">3 ZONES</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">DRS DEPLOYMENT</div>
+                  <div class="stat-val" style="color: var(--color-purple)">AVAILABLE</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <button onclick="runSimulation()">Run Parallel Monte Carlo Optimization</button>
-
-        <div id="alertBox"></div>
-
-        <!-- Strategy Outcome Matrix -->
-        <div style="margin-top: 14px;">
-          <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
-            <span>STRATEGY DISTRIBUTION MATRIX</span>
+        <!-- TAB 3: RACE CONTROL -->
+        <div id="tabRaceControl" class="tab-content">
+          <div class="control-group">
+            <label>Rapid Track Status Override</label>
+            <div class="input-row" style="margin-top: 4px;">
+              <button style="background: var(--color-green); color: #000; font-weight: 800;" onclick="setTrackStatus('Green')">GREEN</button>
+              <button style="background: var(--color-yellow); color: #000; font-weight: 800;" onclick="setTrackStatus('SafetyCar')">SC</button>
+              <button style="background: #eab308; color: #000; font-weight: 800;" onclick="setTrackStatus('VirtualSafetyCar')">VSC</button>
+            </div>
           </div>
-          <div id="strategyResults">
-            <!-- Dynamic Strategy Cards -->
+
+          <div class="control-group" style="margin-top: 14px;">
+            <label>Ambient & Weather Parameters</label>
+            <div class="input-row">
+              <div>
+                <label>Track Temp (°C)</label>
+                <input type="number" value="38.4" step="0.5">
+              </div>
+              <div>
+                <label>Air Temp (°C)</label>
+                <input type="number" value="24.1" step="0.5">
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group" style="margin-top: 14px;">
+            <label>Traffic / Dirty Air Penalty Factor</label>
+            <input type="range" min="0" max="100" value="25" style="width: 100%;">
           </div>
         </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 
   <script>
     let trackGeoJson = null;
+    let currentSessionKey = 9000;
+    let currentSessionLocation = "monza";
+
+    // 22-Driver Grid Scaffold
+    const DRIVER_GRID = [
+      { pos: "P1", no: "1", name: "VER", team: "Red Bull", comp: "MED", age: 15, gap: "LEADER", stops: 0 },
+      { pos: "P2", no: "4", name: "NOR", team: "McLaren", comp: "MED", age: 15, gap: "+2.140s", stops: 0 },
+      { pos: "P3", no: "16", name: "LEC", team: "Ferrari", comp: "HARD", age: 18, gap: "+5.812s", stops: 0 },
+      { pos: "P4", no: "81", name: "PIA", team: "McLaren", comp: "SOFT", age: 10, gap: "+12.450s", stops: 1 },
+      { pos: "P5", no: "63", name: "RUS", team: "Mercedes", comp: "HARD", age: 20, gap: "+18.910s", stops: 0 },
+      { pos: "P6", no: "44", name: "HAM", team: "Ferrari", comp: "MED", age: 12, gap: "+22.340s", stops: 1 },
+      { pos: "P7", no: "14", name: "ALO", team: "Aston Martin", comp: "HARD", age: 22, gap: "+31.050s", stops: 0 },
+      { pos: "P8", no: "18", name: "STR", team: "Aston Martin", comp: "MED", age: 14, gap: "+38.700s", stops: 1 },
+      { pos: "P9", no: "10", name: "GAS", team: "Alpine", comp: "HARD", age: 19, gap: "+44.120s", stops: 0 },
+      { pos: "P10", no: "31", name: "OCO", team: "Haas", comp: "MED", age: 16, gap: "+49.800s", stops: 1 },
+      { pos: "P11", no: "23", name: "ALB", team: "Williams", comp: "HARD", age: 24, gap: "+54.210s", stops: 0 },
+      { pos: "P12", no: "55", name: "SAI", team: "Williams", comp: "SOFT", age: 8, gap: "+58.900s", stops: 1 },
+      { pos: "P13", no: "27", name: "HUL", team: "Sauber", comp: "MED", age: 17, gap: "+1:02.140", stops: 1 },
+      { pos: "P14", no: "30", name: "LAW", team: "VCARB", comp: "HARD", age: 21, gap: "+1:08.300", stops: 0 },
+      { pos: "P15", no: "22", name: "TSU", team: "VCARB", comp: "SOFT", age: 11, gap: "+1:14.500", stops: 1 },
+      { pos: "P16", no: "87", name: "BEA", team: "Haas", comp: "MED", age: 13, gap: "+1:19.800", stops: 1 },
+      { pos: "P17", no: "12", name: "ANT", team: "Mercedes", comp: "HARD", age: 25, gap: "+1:24.100", stops: 0 },
+      { pos: "P18", no: "7", name: "DOO", team: "Alpine", comp: "SOFT", age: 9, gap: "+1:30.400", stops: 2 },
+      { pos: "P19", no: "5", name: "BOR", team: "Sauber", comp: "MED", age: 15, gap: "+1 LAPs", stops: 1 },
+      { pos: "P20", no: "3", name: "RIC", team: "Reserve", comp: "HARD", age: 26, gap: "+1 LAPs", stops: 1 },
+      { pos: "P21", no: "77", name: "BOT", team: "Reserve", comp: "MED", age: 18, gap: "+2 LAPs", stops: 2 },
+      { pos: "P22", no: "24", name: "ZHO", team: "Reserve", comp: "HARD", age: 28, gap: "+2 LAPs", stops: 1 }
+    ];
+
+    // Navigation & Views
+    function showLandingView() {
+      document.getElementById('landingView').classList.remove('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+    }
+
+    function showDashboardView(sessionKey, location, sessionName) {
+      currentSessionKey = sessionKey;
+      currentSessionLocation = location || "monza";
+      
+      document.getElementById('dashSessionTitle').innerText = `${sessionName.toUpperCase()} (${currentSessionLocation.toUpperCase()})`;
+      document.getElementById('telemetrySessionKey').value = sessionKey;
+
+      document.getElementById('landingView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+
+      // Update track selection
+      const trackSelect = document.getElementById('trackSelect');
+      let found = false;
+      for (let opt of trackSelect.options) {
+        if (opt.value.toLowerCase() === currentSessionLocation.toLowerCase()) {
+          trackSelect.value = opt.value;
+          found = true;
+          break;
+        }
+      }
+      if (!found) trackSelect.value = "monza";
+
+      loadTrackGeometry();
+      renderTelemetryCanvas();
+      renderTimingTower();
+      runSimulation();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // Landing Page OpenF1 Sessions Ingestion
+    async function fetchSessions() {
+      const grid = document.getElementById('sessionGrid');
+      grid.innerHTML = '<div style="color: var(--text-muted);">Fetching 2026 OpenF1 Sessions...</div>';
+
+      try {
+        const resp = await fetch('/api/openf1/sessions?year=2026');
+        if (resp.ok) {
+          const sessions = await resp.json();
+          renderSessionGrid(sessions);
+        } else {
+          grid.innerHTML = '<div style="color: var(--color-red);">Failed to load OpenF1 sessions.</div>';
+        }
+      } catch (e) {
+        console.error("Failed to fetch sessions", e);
+        grid.innerHTML = '<div style="color: var(--color-red);">Error connecting to backend server.</div>';
+      }
+    }
+
+    function renderSessionGrid(sessions) {
+      const grid = document.getElementById('sessionGrid');
+      grid.innerHTML = '';
+
+      let hasLive = false;
+      const banner = document.getElementById('liveBanner');
+
+      sessions.forEach((s, idx) => {
+        const isLive = s.is_live;
+        if (isLive) hasLive = true;
+
+        const loc = s.location || s.circuit_short_name || "F1 Track";
+        const dateStr = s.date_start ? s.date_start.substring(0, 10) : `2026-0${Math.floor(idx/3)+3}-15`;
+
+        const card = document.createElement('div');
+        card.className = `session-card ${isLive ? 'is-live' : ''}`;
+        card.onclick = () => showDashboardView(s.session_key, loc, s.session_name || `${loc} Grand Prix`);
+
+        card.innerHTML = `
+          <div class="session-card-header">
+            <span class="round-tag">ROUND ${idx + 1}</span>
+            ${isLive ? '<span class="live-tag">🔴 LIVE NOW</span>' : ''}
+          </div>
+          <div class="session-name">${s.session_name || loc + ' Grand Prix'}</div>
+          <div class="session-circuit">${loc.toUpperCase()} CIRCUIT</div>
+          <div class="session-meta">
+            <span>KEY: ${s.session_key}</span>
+            <span>${dateStr}</span>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+
+      if (hasLive) {
+        banner.className = 'live-session-banner';
+        banner.innerHTML = '<span>🔴 LIVE FORMULA 1 SESSION IS CURRENTLY ACTIVE</span> <span>CLICK TO JOIN LIVE PIT WALL TELEMETRY</span>';
+      } else {
+        banner.className = 'hidden';
+      }
+    }
+
+    // Timing Tower
+    function renderTimingTower() {
+      const tbody = document.getElementById('timingTowerBody');
+      tbody.innerHTML = '';
+
+      DRIVER_GRID.forEach(d => {
+        const tr = document.createElement('tr');
+        if (d.name === "VER") tr.className = 'ego-row';
+
+        const compClass = `comp-${d.comp.toLowerCase()}`;
+        tr.innerHTML = `
+          <td>${d.pos}</td>
+          <td>${d.no}</td>
+          <td>${d.name}${d.name === "VER" ? ' (EGO)' : ''}</td>
+          <td><span class="compound-tag ${compClass}">${d.comp}</span></td>
+          <td>${d.age}</td>
+          <td>${d.gap}</td>
+          <td>${d.stops}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Geometry & Canvas
+    async function onCircuitSelected() {
+      const trackId = document.getElementById('trackSelect').value;
+      currentSessionLocation = trackId;
+      loadTrackGeometry();
+    }
 
     async function loadTrackGeometry() {
-      const trackId = document.getElementById('trackSelect').value;
+      const trackId = document.getElementById('trackSelect').value || currentSessionLocation;
       const display = document.getElementById('circuitNameDisplay');
       display.innerText = trackId.toUpperCase() + " CIRCUIT";
 
@@ -519,13 +966,6 @@
         if (resp.ok) {
           trackGeoJson = await resp.json();
           renderTrackCanvas();
-        } else {
-          // Fallback legacy proxy route
-          const proxyResp = await fetch(`/api/circuit-geometry?name=${trackId}`);
-          if (proxyResp.ok) {
-            trackGeoJson = await proxyResp.json();
-            renderTrackCanvas();
-          }
         }
       } catch (e) {
         console.error("Failed to load track geometry", e);
@@ -534,10 +974,11 @@
 
     function renderTrackCanvas() {
       const canvas = document.getElementById('trackCanvas');
-      const ctx = canvas.getContext('2d');
+      if (!canvas || !canvas.parentElement) return;
       
+      const ctx = canvas.getContext('2d');
       canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight - 180; // Minus telemetry panel
+      canvas.height = canvas.parentElement.clientHeight;
 
       ctx.fillStyle = '#020204';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -545,11 +986,10 @@
       if (!trackGeoJson || !trackGeoJson.features) {
         ctx.fillStyle = '#333344';
         ctx.font = '12px JetBrains Mono';
-        ctx.fillText('SELECT CIRCUIT TO RENDER VECTOR GEOMETRY...', 20, 30);
+        ctx.fillText('LOADING VECTOR GEOMETRY...', 20, 30);
         return;
       }
 
-      // Extract coordinates from GeoJSON
       let coords = [];
       trackGeoJson.features.forEach(f => {
         if (f.geometry && f.geometry.type === 'LineString') {
@@ -561,7 +1001,6 @@
 
       if (coords.length === 0) return;
 
-      // Project Min/Max Lat/Lng to Canvas 2D
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       coords.forEach(c => {
         const x = c[0];
@@ -572,7 +1011,7 @@
         if (y > maxY) maxY = y;
       });
 
-      const padding = 40;
+      const padding = 30;
       const widthScale = (canvas.width - padding * 2) / (maxX - minX || 1);
       const heightScale = (canvas.height - padding * 2) / (maxY - minY || 1);
       const scale = Math.min(widthScale, heightScale);
@@ -586,7 +1025,7 @@
 
       coords.forEach((c, idx) => {
         const px = offsetX + (c[0] - minX) * scale;
-        const py = canvas.height - (offsetY + (c[1] - minY) * scale); // Invert Y
+        const py = canvas.height - (offsetY + (c[1] - minY) * scale);
 
         if (idx === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
@@ -594,7 +1033,6 @@
 
       ctx.stroke();
 
-      // Render Racing Line / Sectors overlay
       ctx.beginPath();
       ctx.strokeStyle = '#a855f7';
       ctx.lineWidth = 1;
@@ -611,8 +1049,9 @@
 
     function renderTelemetryCanvas() {
       const canvas = document.getElementById('telemetryCanvas');
+      if (!canvas || !canvas.parentElement) return;
+
       const ctx = canvas.getContext('2d');
-      
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight - 30;
 
@@ -659,6 +1098,7 @@
       ctx.stroke();
     }
 
+    // Optimization & Simulation
     async function runSimulation() {
       const currentLap = parseInt(document.getElementById('currentLapInput').value);
       const tireAge = parseInt(document.getElementById('tireAgeInput').value);
@@ -716,7 +1156,7 @@
       alertBox.innerHTML = '';
 
       if (data.safety_car_advantage_active) {
-        alertBox.innerHTML = '<div class="box-now-alert">BOX NOW! CHEAP PIT STOP ADVANTAGE ACTIVE UNDER SAFETY CAR</div>';
+        alertBox.innerHTML = '<div class="box-now-alert">BOX NOW! SC ADVANTAGE ACTIVE</div>';
       }
 
       const allStrats = [data.optimal_strategy, ...data.alternative_strategies];
@@ -760,16 +1200,41 @@
       });
     }
 
+    function setTrackStatus(status) {
+      document.getElementById('envSelect').value = status;
+      runSimulation();
+    }
+
+    async function replayOpenF1State() {
+      const driver = parseInt(document.getElementById('telemetryDriver').value);
+      const lap = parseInt(document.getElementById('currentLapInput').value);
+
+      try {
+        const resp = await fetch('/api/openf1/replay-state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_key: currentSessionKey,
+            ego_driver_number: driver,
+            current_lap: lap
+          })
+        });
+        if (resp.ok) {
+          runSimulation();
+        }
+      } catch (e) {
+        console.error("Replay state failed", e);
+      }
+    }
+
     window.addEventListener('resize', () => {
       renderTrackCanvas();
       renderTelemetryCanvas();
     });
 
-    // Initial Load
+    // Startup Initialization
     window.onload = () => {
-      loadTrackGeometry();
-      renderTelemetryCanvas();
-      runSimulation();
+      fetchSessions();
     };
   </script>
 </body>
