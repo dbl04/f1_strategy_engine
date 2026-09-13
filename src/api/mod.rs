@@ -25,6 +25,7 @@ use crate::domain::{
         tracks::get_circuit_geometry_by_id,
         openf1::get_openf1_sessions,
         openf1::get_openf1_laps,
+        openf1::get_openf1_locations,
         openf1::replay_openf1_state,
     ),
     components(schemas(
@@ -46,6 +47,7 @@ use crate::domain::{
         openf1::OpenF1Session,
         openf1::OpenF1Lap,
         openf1::OpenF1CarData,
+        openf1::OpenF1Location,
         openf1::ReplayStateRequest,
     )),
     tags(
@@ -63,7 +65,7 @@ pub fn create_router() -> Router {
         .route("/api/circuit-geometry/{track_id}", get(tracks::get_circuit_geometry_by_id))
         .route("/api/openf1/sessions", get(openf1::get_openf1_sessions))
         .route("/api/openf1/laps/{session_key}/{driver_number}", get(openf1::get_openf1_laps))
+        .route("/api/openf1/location", get(openf1::get_openf1_locations))
         .route("/api/openf1/replay-state", post(openf1::replay_openf1_state))
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }
-

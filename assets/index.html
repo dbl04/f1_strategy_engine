@@ -55,7 +55,6 @@
       flex-direction: column;
     }
 
-    /* Views */
     .app-view {
       display: flex;
       flex-direction: column;
@@ -136,7 +135,7 @@
     .status-vsc { color: var(--color-yellow); border-color: var(--color-yellow); }
     .status-red { color: #fff; background: var(--color-red); font-weight: 800; }
 
-    /* VIEW 1: LANDING PAGE */
+    /* VIEW 1: ACCORDION LANDING PAGE */
     #landingView {
       background-color: var(--bg-black);
       padding: 20px;
@@ -144,7 +143,7 @@
     }
 
     .landing-header {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       border-bottom: 1px solid var(--border-dark);
       padding-bottom: 16px;
       display: flex;
@@ -153,7 +152,7 @@
     }
 
     .landing-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 800;
       color: var(--text-main);
       letter-spacing: 1px;
@@ -161,7 +160,7 @@
 
     .landing-subtitle {
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 11px;
       margin-top: 4px;
     }
 
@@ -179,73 +178,79 @@
       animation: pulse 1s infinite alternate;
     }
 
-    .session-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
+    /* Accordion Layout */
+    .gp-accordion-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .session-card {
+    .gp-card {
       background: var(--bg-panel);
       border: 1px solid var(--border-dark);
-      padding: 14px;
+    }
+
+    .gp-card-header {
+      padding: 12px 16px;
+      background: var(--bg-surface);
       cursor: pointer;
-      transition: border-color 0.15s ease;
-    }
-
-    .session-card:hover {
-      border-color: var(--color-purple);
-    }
-
-    .session-card.is-live {
-      border-color: var(--color-red);
-      background: #0d0505;
-    }
-
-    .session-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .round-tag {
-      font-size: 10px;
       font-weight: 700;
-      color: var(--text-muted);
-      background: var(--bg-surface);
-      padding: 2px 6px;
-      border: 1px solid var(--border-dark);
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-dark);
+      user-select: none;
     }
 
-    .live-tag {
-      background: var(--color-red);
-      color: #fff;
-      font-weight: 800;
-      font-size: 10px;
-      padding: 2px 6px;
+    .gp-card-header:hover {
+      border-color: var(--color-purple);
+      color: var(--color-purple);
     }
 
-    .session-name {
-      font-size: 14px;
+    .gp-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .gp-sessions-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      padding: 14px;
+      background: var(--bg-panel);
+    }
+
+    .sub-session-card {
+      background: #08080c;
+      border: 1px solid var(--border-light);
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .sub-session-card:hover {
+      border-color: var(--color-purple);
+      background: #0e0e14;
+    }
+
+    .sub-session-card.is-live {
+      border-color: var(--color-red);
+      background: #140808;
+    }
+
+    .sub-session-type {
       font-weight: 700;
+      font-size: 12px;
       color: var(--text-main);
       margin-bottom: 4px;
-    }
-
-    .session-circuit {
-      font-size: 11px;
-      color: var(--color-purple);
-      margin-bottom: 10px;
-    }
-
-    .session-meta {
-      font-size: 10px;
-      color: var(--text-muted);
       display: flex;
       justify-content: space-between;
-      border-top: 1px solid #111118;
-      padding-top: 8px;
+    }
+
+    .sub-session-date {
+      font-size: 10px;
+      color: var(--text-muted);
     }
 
     /* VIEW 2: PIT WALL DASHBOARD */
@@ -530,11 +535,11 @@
 </head>
 <body>
 
-  <!-- VIEW 1: LANDING PAGE (2026 SESSION SELECTOR) -->
+  <!-- VIEW 1: ACCORDION LANDING PAGE -->
   <div id="landingView" class="app-view">
     <header>
       <div class="brand-title">
-        <span>PIT WALL</span> F1 STRATEGY & TELEMETRY ENGINE — 2026 SEASON
+        <span>PIT WALL</span> F1 STRATEGY & TELEMETRY ENGINE — 2026 CALENDAR
       </div>
       <div class="header-metrics">
         <div>STATUS: <span style="color: var(--color-green)">OPENF1 CONNECTED</span></div>
@@ -544,21 +549,21 @@
     <div class="panel-content" style="padding: 24px;">
       <div class="landing-header">
         <div>
-          <div class="landing-title">2026 FORMULA 1 GRAND PRIX CALENDAR</div>
-          <div class="landing-subtitle">Select a session to initialize live vector track geometry and Rayon strategy optimizer</div>
+          <div class="landing-title">GRAND PRIX WEEKEND SESSIONS</div>
+          <div class="landing-subtitle">Expand a Grand Prix weekend to select session telemetry or launch live radar tracking</div>
         </div>
-        <button class="nav-btn" onclick="fetchSessions()">🔄 REFRESH SESSIONS</button>
+        <button class="nav-btn" onclick="fetchSessions()">🔄 REFRESH CALENDAR</button>
       </div>
 
       <div id="liveBanner" class="hidden"></div>
 
-      <div id="sessionGrid" class="session-grid">
-        <!-- Dynamic Session Cards -->
+      <div id="accordionContainer" class="gp-accordion-container">
+        <!-- Dynamic GP Weekend Accordions -->
       </div>
     </div>
   </div>
 
-  <!-- VIEW 2: PIT WALL DASHBOARD (100VH TABBED INTERFACE) -->
+  <!-- VIEW 2: PIT WALL DASHBOARD -->
   <div id="dashboardView" class="app-view hidden">
     <header>
       <div style="display: flex; align-items: center; gap: 16px;">
@@ -569,9 +574,21 @@
       </div>
 
       <div class="header-metrics">
+        <div>
+          <label style="color: var(--text-muted); font-size: 10px;">FOLLOW DRIVER: </label>
+          <select id="followDriverSelect" style="width: 110px; padding: 2px 4px; font-size: 10px; display: inline-block;" onchange="onFollowDriverChanged()">
+            <option value="">(NONE)</option>
+            <option value="1">#1 VER</option>
+            <option value="4">#4 NOR</option>
+            <option value="16">#16 LEC</option>
+            <option value="81">#81 PIA</option>
+            <option value="63">#63 RUS</option>
+            <option value="44">#44 HAM</option>
+            <option value="14">#14 ALO</option>
+          </select>
+        </div>
         <div>TRACK TEMP: <span style="color: var(--color-yellow)">38.4°C</span></div>
         <div>AIR TEMP: <span style="color: var(--color-cyan)">24.1°C</span></div>
-        <div>RUBBER: <span style="color: var(--color-green)">OPTIMAL</span></div>
         <div id="statusBadge" class="status-badge status-green">TRACK STATUS: GREEN</div>
       </div>
     </header>
@@ -597,17 +614,17 @@
               </tr>
             </thead>
             <tbody id="timingTowerBody">
-              <!-- Populated dynamically with 22 drivers -->
+              <!-- Populated dynamically -->
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- CENTER PANEL: 2D VECTOR MAP (60%) & TELEMETRY TRACES (40%) -->
+      <!-- CENTER PANEL: LIVE MAP RADAR (60%) & TELEMETRY TRACES (40%) -->
       <div class="panel center-panel-wrapper">
         <div class="canvas-container">
           <div class="panel-header">
-            <span>2D VECTOR CIRCUIT RENDERER (LOCAL GEOJSON)</span>
+            <span>LIVE CIRCUIT MAP RADAR (PATH2D CACHED VECTOR + 22 DRIVER DOTS)</span>
             <span id="circuitNameDisplay">AUTODROMO NAZIONALE MONZA</span>
           </div>
           <canvas id="trackCanvas"></canvas>
@@ -720,7 +737,7 @@
 
           <div class="control-group">
             <label>Target Driver</label>
-            <select id="telemetryDriver" onchange="fetchOpenF1Laps()">
+            <select id="telemetryDriver" onchange="onFollowDriverChanged()">
               <option value="1">#1 VER (Max Verstappen)</option>
               <option value="4">#4 NOR (Lando Norris)</option>
               <option value="16">#16 LEC (Charles Leclerc)</option>
@@ -793,7 +810,6 @@
   </div>
 
   <script>
-    let trackGeoJson = null;
     let currentSessionKey = 9000;
     let currentSessionLocation = "monza";
 
@@ -823,8 +839,214 @@
       { pos: "P22", no: "24", name: "ZHO", team: "Reserve", comp: "HARD", age: 28, gap: "+2 LAPs", stops: 1 }
     ];
 
+    // High Performance Radar Map Engine
+    class RadarEngine {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+        this.cachedPath2D = null;
+        this.coords = [];
+        this.bounds = null;
+        this.driverLocations = [];
+        this.followedDriver = null;
+        this.pollingInterval = null;
+        this.scale = 1.0;
+        this.offsetX = 0;
+        this.offsetY = 0;
+      }
+
+      setTrackGeometry(geoJson) {
+        if (!geoJson || !geoJson.features) return;
+        this.coords = [];
+        geoJson.features.forEach(f => {
+          if (f.geometry && f.geometry.type === 'LineString') {
+            this.coords.push(...f.geometry.coordinates);
+          } else if (f.geometry && f.geometry.type === 'MultiLineString') {
+            f.geometry.coordinates.forEach(line => this.coords.push(...line));
+          }
+        });
+
+        if (this.coords.length === 0) return;
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        this.coords.forEach(c => {
+          if (c[0] < minX) minX = c[0];
+          if (c[0] > maxX) maxX = c[0];
+          if (c[1] < minY) minY = c[1];
+          if (c[1] > maxY) maxY = c[1];
+        });
+
+        this.bounds = { minX, maxX, minY, maxY };
+        this.rebuildPath2D();
+        this.render();
+      }
+
+      rebuildPath2D() {
+        if (!this.canvas || !this.bounds || this.coords.length === 0) return;
+        
+        this.canvas.width = this.canvas.parentElement.clientWidth;
+        this.canvas.height = this.canvas.parentElement.clientHeight;
+
+        const { minX, maxX, minY, maxY } = this.bounds;
+        const padding = 35;
+        const widthScale = (this.canvas.width - padding * 2) / (maxX - minX || 1);
+        const heightScale = (this.canvas.height - padding * 2) / (maxY - minY || 1);
+        const scale = Math.min(widthScale, heightScale);
+
+        this.scale = scale;
+        this.offsetX = (this.canvas.width - (maxX - minX) * scale) / 2;
+        this.offsetY = (this.canvas.height - (maxY - minY) * scale) / 2;
+
+        const path = new Path2D();
+        this.coords.forEach((c, idx) => {
+          const px = this.offsetX + (c[0] - minX) * scale;
+          const py = this.canvas.height - (this.offsetY + (c[1] - minY) * scale);
+          if (idx === 0) path.moveTo(px, py);
+          else path.lineTo(px, py);
+        });
+
+        this.cachedPath2D = path;
+      }
+
+      updateDriverLocations(locations) {
+        this.driverLocations = locations || [];
+        this.render();
+      }
+
+      setFollowedDriver(driverNo) {
+        this.followedDriver = driverNo;
+        this.render();
+      }
+
+      render() {
+        if (!this.canvas || !this.ctx) return;
+        const ctx = this.ctx;
+
+        ctx.fillStyle = '#020204';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (this.cachedPath2D) {
+          ctx.strokeStyle = '#222233';
+          ctx.lineWidth = 6;
+          ctx.stroke(this.cachedPath2D);
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke(this.cachedPath2D);
+
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke(this.cachedPath2D);
+          ctx.setLineDash([]);
+        } else {
+          ctx.fillStyle = '#333344';
+          ctx.font = '12px JetBrains Mono';
+          ctx.fillText('LOADING CIRCUIT RADAR GEOMETRY...', 20, 30);
+          return;
+        }
+
+        if (!this.bounds || this.driverLocations.length === 0) return;
+
+        const { minX, maxX, minY, maxY } = this.bounds;
+
+        const TEAM_COLORS = {
+          1: '#3671C6',
+          4: '#FF8000',
+          81: '#FF8000',
+          16: '#E80020',
+          44: '#E80020',
+          63: '#27F4D2',
+          12: '#27F4D2',
+          14: '#229971',
+          18: '#229971',
+          10: '#0093CC',
+          7: '#0093CC',
+          31: '#B6BABD',
+          87: '#B6BABD',
+          23: '#64C4FF',
+          55: '#64C4FF',
+          27: '#52E252',
+          5: '#52E252',
+          22: '#6692FF',
+          30: '#6692FF',
+        };
+
+        this.driverLocations.forEach(loc => {
+          let px, py;
+          if (Math.abs(loc.x) > 100 || Math.abs(loc.y) > 100) {
+            const normX = (loc.x - (-2000)) / (4000);
+            const normY = (loc.y - (-2000)) / (4000);
+            px = this.offsetX + normX * (maxX - minX) * this.scale;
+            py = this.canvas.height - (this.offsetY + normY * (maxY - minY) * this.scale);
+          } else {
+            px = this.offsetX + (loc.x - minX) * this.scale;
+            py = this.canvas.height - (this.offsetY + (loc.y - minY) * this.scale);
+          }
+
+          px = Math.max(15, Math.min(this.canvas.width - 15, px));
+          py = Math.max(15, Math.min(this.canvas.height - 15, py));
+
+          const isFollowed = (this.followedDriver && parseInt(this.followedDriver) === loc.driver_number);
+          const color = TEAM_COLORS[loc.driver_number] || '#a855f7';
+
+          if (isFollowed) {
+            ctx.beginPath();
+            ctx.arc(px, py, 14, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(px, py, 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
+            ctx.fill();
+          }
+
+          ctx.beginPath();
+          ctx.arc(px, py, isFollowed ? 7 : 5, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px JetBrains Mono';
+          ctx.fillText(`#${loc.driver_number}`, px + 7, py + 3);
+        });
+      }
+
+      startPolling(sessionKey) {
+        if (this.pollingInterval) clearInterval(this.pollingInterval);
+        const fetchLocs = async () => {
+          try {
+            const resp = await fetch(`/api/openf1/location?session_key=${sessionKey}`);
+            if (resp.ok) {
+              const locs = await resp.json();
+              this.updateDriverLocations(locs);
+            }
+          } catch (e) {
+            console.error("Failed to poll driver locations", e);
+          }
+        };
+        fetchLocs();
+        this.pollingInterval = setInterval(fetchLocs, 1000);
+      }
+
+      stopPolling() {
+        if (this.pollingInterval) {
+          clearInterval(this.pollingInterval);
+          this.pollingInterval = null;
+        }
+      }
+    }
+
+    const radarEngine = new RadarEngine('trackCanvas');
+
     // Navigation & Views
     function showLandingView() {
+      radarEngine.stopPolling();
       document.getElementById('landingView').classList.remove('hidden');
       document.getElementById('dashboardView').classList.add('hidden');
     }
@@ -839,7 +1061,6 @@
       document.getElementById('landingView').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
 
-      // Update track selection
       const trackSelect = document.getElementById('trackSelect');
       let found = false;
       for (let opt of trackSelect.options) {
@@ -855,6 +1076,8 @@
       renderTelemetryCanvas();
       renderTimingTower();
       runSimulation();
+
+      radarEngine.startPolling(sessionKey);
     }
 
     function switchTab(tabId) {
@@ -865,62 +1088,104 @@
       document.getElementById(tabId).classList.add('active');
     }
 
-    // Landing Page OpenF1 Sessions Ingestion
+    // Landing Page OpenF1 Grouped Accordion Ingestion
     async function fetchSessions() {
-      const grid = document.getElementById('sessionGrid');
-      grid.innerHTML = '<div style="color: var(--text-muted);">Fetching 2026 OpenF1 Sessions...</div>';
+      const container = document.getElementById('accordionContainer');
+      container.innerHTML = '<div style="color: var(--text-muted);">Loading F1 Grand Prix Sessions...</div>';
 
       try {
         const resp = await fetch('/api/openf1/sessions?year=2026');
         if (resp.ok) {
           const sessions = await resp.json();
-          renderSessionGrid(sessions);
+          renderGroupedAccordions(sessions);
         } else {
-          grid.innerHTML = '<div style="color: var(--color-red);">Failed to load OpenF1 sessions.</div>';
+          container.innerHTML = '<div style="color: var(--color-red);">Failed to load OpenF1 sessions.</div>';
         }
       } catch (e) {
         console.error("Failed to fetch sessions", e);
-        grid.innerHTML = '<div style="color: var(--color-red);">Error connecting to backend server.</div>';
+        container.innerHTML = '<div style="color: var(--color-red);">Error connecting to backend server.</div>';
       }
     }
 
-    function renderSessionGrid(sessions) {
-      const grid = document.getElementById('sessionGrid');
-      grid.innerHTML = '';
+    function renderGroupedAccordions(sessions) {
+      const container = document.getElementById('accordionContainer');
+      container.innerHTML = '';
+
+      // Filter out sessions strictly in the future (or use date_start parsing)
+      const now = Date.now();
+      const availableSessions = sessions.filter(s => {
+        if (!s.date_start) return true;
+        const sTime = new Date(s.date_start).getTime();
+        return sTime <= now || s.year === 2026; // Include sessions available for viewing
+      });
+
+      // Group by location / GP Weekend
+      const grouped = {};
+      availableSessions.forEach(s => {
+        const loc = s.location || s.circuit_short_name || "Grand Prix";
+        if (!grouped[loc]) grouped[loc] = [];
+        grouped[loc].push(s);
+      });
 
       let hasLive = false;
       const banner = document.getElementById('liveBanner');
 
-      sessions.forEach((s, idx) => {
-        const isLive = s.is_live;
-        if (isLive) hasLive = true;
-
-        const loc = s.location || s.circuit_short_name || "F1 Track";
-        const dateStr = s.date_start ? s.date_start.substring(0, 10) : `2026-0${Math.floor(idx/3)+3}-15`;
+      Object.keys(grouped).forEach((gpName, idx) => {
+        const gpSessions = grouped[gpName];
+        const isGpLive = gpSessions.some(s => s.is_live);
+        if (isGpLive) hasLive = true;
 
         const card = document.createElement('div');
-        card.className = `session-card ${isLive ? 'is-live' : ''}`;
-        card.onclick = () => showDashboardView(s.session_key, loc, s.session_name || `${loc} Grand Prix`);
+        card.className = 'gp-card';
 
-        card.innerHTML = `
-          <div class="session-card-header">
+        const cardHeader = document.createElement('div');
+        cardHeader.className = 'gp-card-header';
+        cardHeader.onclick = () => {
+          const list = card.querySelector('.gp-sessions-list');
+          list.classList.toggle('hidden');
+        };
+
+        cardHeader.innerHTML = `
+          <div class="gp-title-group">
             <span class="round-tag">ROUND ${idx + 1}</span>
-            ${isLive ? '<span class="live-tag">🔴 LIVE NOW</span>' : ''}
+            <span>${gpName.toUpperCase()} GRAND PRIX</span>
+            ${isGpLive ? '<span class="live-tag">🔴 LIVE NOW</span>' : ''}
           </div>
-          <div class="session-name">${s.session_name || loc + ' Grand Prix'}</div>
-          <div class="session-circuit">${loc.toUpperCase()} CIRCUIT</div>
-          <div class="session-meta">
-            <span>KEY: ${s.session_key}</span>
-            <span>${dateStr}</span>
+          <div style="font-size: 11px; color: var(--text-muted);">
+            ${gpSessions.length} SESSIONS ▼
           </div>
         `;
 
-        grid.appendChild(card);
+        const sessionsList = document.createElement('div');
+        sessionsList.className = 'gp-sessions-list';
+
+        gpSessions.forEach(s => {
+          const subCard = document.createElement('div');
+          subCard.className = `sub-session-card ${s.is_live ? 'is-live' : ''}`;
+          subCard.onclick = (e) => {
+            e.stopPropagation();
+            showDashboardView(s.session_key, gpName, `${gpName} ${s.session_name || 'Session'}`);
+          };
+
+          subCard.innerHTML = `
+            <div class="sub-session-type">
+              <span>${s.session_name || 'Race'}</span>
+              ${s.is_live ? '<span class="live-tag">LIVE</span>' : ''}
+            </div>
+            <div class="sub-session-date">KEY: ${s.session_key} | ${s.date_start ? s.date_start.substring(0, 10) : '2026'}</div>
+          `;
+
+          sessionsList.appendChild(subCard);
+        });
+
+        card.appendChild(cardHeader);
+        card.appendChild(sessionsList);
+        container.appendChild(card);
       });
 
       if (hasLive) {
         banner.className = 'live-session-banner';
-        banner.innerHTML = '<span>🔴 LIVE FORMULA 1 SESSION IS CURRENTLY ACTIVE</span> <span>CLICK TO JOIN LIVE PIT WALL TELEMETRY</span>';
+        banner.innerHTML = '<span>🔴 LIVE FORMULA 1 SESSION ACTIVE</span> <span>EXPAND GRAND PRIX TO LAUNCH LIVE RADAR TELEMETRY</span>';
       } else {
         banner.className = 'hidden';
       }
@@ -949,7 +1214,7 @@
       });
     }
 
-    // Geometry & Canvas
+    // Geometry & Radar Engine Integration
     async function onCircuitSelected() {
       const trackId = document.getElementById('trackSelect').value;
       currentSessionLocation = trackId;
@@ -964,87 +1229,17 @@
       try {
         const resp = await fetch(`/api/circuit-geometry/${trackId}`);
         if (resp.ok) {
-          trackGeoJson = await resp.json();
-          renderTrackCanvas();
+          const geoJson = await resp.json();
+          radarEngine.setTrackGeometry(geoJson);
         }
       } catch (e) {
         console.error("Failed to load track geometry", e);
       }
     }
 
-    function renderTrackCanvas() {
-      const canvas = document.getElementById('trackCanvas');
-      if (!canvas || !canvas.parentElement) return;
-      
-      const ctx = canvas.getContext('2d');
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
-
-      ctx.fillStyle = '#020204';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      if (!trackGeoJson || !trackGeoJson.features) {
-        ctx.fillStyle = '#333344';
-        ctx.font = '12px JetBrains Mono';
-        ctx.fillText('LOADING VECTOR GEOMETRY...', 20, 30);
-        return;
-      }
-
-      let coords = [];
-      trackGeoJson.features.forEach(f => {
-        if (f.geometry && f.geometry.type === 'LineString') {
-          coords.push(...f.geometry.coordinates);
-        } else if (f.geometry && f.geometry.type === 'MultiLineString') {
-          f.geometry.coordinates.forEach(line => coords.push(...line));
-        }
-      });
-
-      if (coords.length === 0) return;
-
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      coords.forEach(c => {
-        const x = c[0];
-        const y = c[1];
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      });
-
-      const padding = 30;
-      const widthScale = (canvas.width - padding * 2) / (maxX - minX || 1);
-      const heightScale = (canvas.height - padding * 2) / (maxY - minY || 1);
-      const scale = Math.min(widthScale, heightScale);
-
-      const offsetX = (canvas.width - (maxX - minX) * scale) / 2;
-      const offsetY = (canvas.height - (maxY - minY) * scale) / 2;
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
-
-      coords.forEach((c, idx) => {
-        const px = offsetX + (c[0] - minX) * scale;
-        const py = canvas.height - (offsetY + (c[1] - minY) * scale);
-
-        if (idx === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#a855f7';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      coords.forEach((c, idx) => {
-        const px = offsetX + (c[0] - minX) * scale;
-        const py = canvas.height - (offsetY + (c[1] - minY) * scale);
-        if (idx === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.stroke();
-      ctx.setLineDash([]);
+    function onFollowDriverChanged() {
+      const val = document.getElementById('followDriverSelect').value || document.getElementById('telemetryDriver').value;
+      radarEngine.setFollowedDriver(val ? parseInt(val) : null);
     }
 
     function renderTelemetryCanvas() {
@@ -1061,7 +1256,6 @@
       const points = 100;
       const step = canvas.width / points;
 
-      // Speed Trace (White)
       ctx.beginPath();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5;
@@ -1073,7 +1267,6 @@
       }
       ctx.stroke();
 
-      // Throttle Trace (Green)
       ctx.beginPath();
       ctx.strokeStyle = '#22c55e';
       ctx.lineWidth = 1;
@@ -1085,7 +1278,6 @@
       }
       ctx.stroke();
 
-      // Brake Trace (Red)
       ctx.beginPath();
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = 1;
@@ -1228,11 +1420,11 @@
     }
 
     window.addEventListener('resize', () => {
-      renderTrackCanvas();
+      radarEngine.rebuildPath2D();
+      radarEngine.render();
       renderTelemetryCanvas();
     });
 
-    // Startup Initialization
     window.onload = () => {
       fetchSessions();
     };
