@@ -1,4 +1,4 @@
-# 🏎️ ApexTwin: Real-Time Formula 1 Digital Twin & Strategy Optimization Engine
+# 🏎️ F1 Strategy Engine: Real-Time Formula 1 Digital Twin & Pit Wall Optimizer
 
 [![Rust](https://img.shields.io/badge/Rust-2024_Edition-orange?logo=rust)](https://www.rust-lang.org/)
 [![Axum](https://img.shields.io/badge/Framework-Axum_0.7-blue)](https://github.com/tokio-rs/axum)
@@ -92,8 +92,8 @@ flowchart TD
 ### Installation & Execution
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/your-username/apex-twin.git](https://github.com/your-username/apex-twin.git)
-cd apex-twin
+git clone https://github.com/dbl04/f1_strategy_engine.git
+cd f1_strategy_engine
 
 # 2. Build and run backend server in release mode (for maximum compiler optimization)
 cargo run --release
