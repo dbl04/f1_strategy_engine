@@ -103,6 +103,14 @@ pub struct OpenF1Lap {
     #[serde(default)]
     pub lap_duration: Option<f64>,
     #[serde(default)]
+    pub duration_sector_1: Option<f64>,
+    #[serde(default)]
+    pub duration_sector_2: Option<f64>,
+    #[serde(default)]
+    pub duration_sector_3: Option<f64>,
+    #[serde(default)]
+    pub is_pit_out_lap: Option<bool>,
+    #[serde(default)]
     pub stint: Option<u32>,
     #[serde(default)]
     pub compound: Option<String>,
@@ -744,6 +752,10 @@ fn generate_fallback_laps(_session_key: u64) -> Vec<OpenF1Lap> {
             lap_number: 1,
             driver_number: 1,
             lap_duration: Some(81.420),
+            duration_sector_1: Some(27.1),
+            duration_sector_2: Some(27.3),
+            duration_sector_3: Some(27.02),
+            is_pit_out_lap: Some(false),
             stint: Some(1),
             compound: Some("MEDIUM".to_string()),
             date_start: Some("2026-03-15T05:00:00+00:00".to_string()),
@@ -752,6 +764,10 @@ fn generate_fallback_laps(_session_key: u64) -> Vec<OpenF1Lap> {
             lap_number: 2,
             driver_number: 1,
             lap_duration: Some(81.110),
+            duration_sector_1: Some(27.0),
+            duration_sector_2: Some(27.2),
+            duration_sector_3: Some(26.91),
+            is_pit_out_lap: Some(false),
             stint: Some(1),
             compound: Some("MEDIUM".to_string()),
             date_start: Some("2026-03-15T05:01:21+00:00".to_string()),

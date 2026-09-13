@@ -918,17 +918,33 @@
       return closestProgress;
     }
 
-    // Helper: Map progress s in [0.0, 1.0] to interpolated (x,y) coordinates on circuit
+    // Helper: Map progress s in [0.0, 1.0] to interpolated (x,y) coordinates on circuit with continuous closed loop
     function getCoordsForProgress(s) {
       if (!refTrackPoints || refTrackPoints.length === 0) return { x: 0.5, y: 0.5 };
       const normS = ((s % 1.0) + 1.0) % 1.0;
       const total = refTrackPoints.length;
-      const exactIdx = normS * (total - 1);
-      const idx1 = Math.floor(exactIdx);
-      const idx2 = Math.min(idx1 + 1, total - 1);
-      const frac = exactIdx - idx1;
+
+      // Binary search for segment [low-1, low] where refTrackPoints[low-1].progress <= normS <= refTrackPoints[low].progress
+      let low = 0;
+      let high = total - 1;
+
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        if (refTrackPoints[mid].progress <= normS) {
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      const idx1 = Math.max(0, Math.min(total - 1, low - 1));
+      const idx2 = Math.min(total - 1, idx1 + 1);
+
       const pt1 = refTrackPoints[idx1];
       const pt2 = refTrackPoints[idx2];
+      const segLen = pt2.progress - pt1.progress;
+      const frac = (segLen > 0.000001) ? (normS - pt1.progress) / segLen : 0;
+
       return {
         x: pt1.x + (pt2.x - pt1.x) * frac,
         y: pt1.y + (pt2.y - pt1.y) * frac
@@ -1152,26 +1168,35 @@
             if (Array.isArray(bakedTrack) && bakedTrack.length > 0) {
               this.refCoords = bakedTrack;
 
+              // Ensure the loop is closed smoothly back to the first point
+              const closedCoords = [...bakedTrack];
+              const firstPt = bakedTrack[0];
+              const lastPt = bakedTrack[bakedTrack.length - 1];
+              const gap = Math.hypot(lastPt.x - firstPt.x, lastPt.y - firstPt.y);
+              if (gap > 0.0001) {
+                closedCoords.push({ x: firstPt.x, y: firstPt.y });
+              }
+
               let totalDist = 0;
               const pointsWithDist = [];
-              for (let i = 0; i < bakedTrack.length; i++) {
+              for (let i = 0; i < closedCoords.length; i++) {
                 if (i === 0) {
-                  pointsWithDist.push({ x: bakedTrack[0].x, y: bakedTrack[0].y, dist: 0 });
+                  pointsWithDist.push({ x: closedCoords[0].x, y: closedCoords[0].y, dist: 0 });
                 } else {
-                  const dx = bakedTrack[i].x - bakedTrack[i - 1].x;
-                  const dy = bakedTrack[i].y - bakedTrack[i - 1].y;
-                  const segDist = Math.sqrt(dx * dx + dy * dy);
+                  const dx = closedCoords[i].x - closedCoords[i - 1].x;
+                  const dy = closedCoords[i].y - closedCoords[i - 1].y;
+                  const segDist = Math.hypot(dx, dy);
                   totalDist += segDist;
-                  pointsWithDist.push({ x: bakedTrack[i].x, y: bakedTrack[i].y, dist: totalDist });
+                  pointsWithDist.push({ x: closedCoords[i].x, y: closedCoords[i].y, dist: totalDist });
                 }
               }
 
               const totalLapDist = totalDist > 0 ? totalDist : 1;
-              refTrackPoints = pointsWithDist.map(pt => ({
+              refTrackPoints = pointsWithDist.map((pt, idx) => ({
                 x: pt.x,
                 y: pt.y,
                 distFromStart: pt.dist,
-                progress: pt.dist / totalLapDist
+                progress: (idx === pointsWithDist.length - 1) ? 1.0 : (pt.dist / totalLapDist)
               }));
 
               this.rebuildPath2D();
@@ -1389,15 +1414,37 @@
         let cumTime = 0;
         const timelineLaps = [];
         dLaps.forEach(l => {
-          const dur = (l.lap_duration && l.lap_duration > 30) ? l.lap_duration : (88.0 + (idx * 0.35));
+          const totalDur = (l.lap_duration && l.lap_duration > 30) ? l.lap_duration : (88.0 + (idx * 0.35));
+          let s1 = l.duration_sector_1;
+          let s2 = l.duration_sector_2;
+          let s3 = l.duration_sector_3;
+
+          const standardPace = 88.0 + (idx * 0.35);
+          if (!s1 || !s2 || !s3 || (s1 <= 0) || (s2 <= 0) || (s3 <= 0)) {
+            if (totalDur > standardPace + 12.0) {
+              // Pit in-lap: normal race speed in S1 & S2, remaining time loss isolated in S3 (pit lane / straight)
+              s1 = standardPace * 0.33;
+              s2 = standardPace * 0.35;
+              s3 = totalDur - (s1 + s2);
+            } else {
+              s1 = totalDur * 0.33;
+              s2 = totalDur * 0.35;
+              s3 = totalDur - (s1 + s2);
+            }
+          }
+
           const startTime = cumTime;
-          cumTime += dur;
+          cumTime += totalDur;
           timelineLaps.push({
             lap_number: l.lap_number,
-            duration: dur,
+            duration: totalDur,
+            s1_duration: s1,
+            s2_duration: s2,
+            s3_duration: s3,
             start_time: startTime,
             end_time: cumTime,
-            is_pit_out: l.is_pit_out_lap || false
+            is_pit_out: l.is_pit_out_lap || false,
+            is_pit_in: (s3 > (s1 + s2) * 0.7) || (totalDur > standardPace + 12.0)
           });
           if (l.lap_number > maxSessionLaps) maxSessionLaps = l.lap_number;
         });
@@ -1411,9 +1458,13 @@
             timelineLaps.push({
               lap_number: ln,
               duration: defaultLapSec,
+              s1_duration: defaultLapSec * 0.33,
+              s2_duration: defaultLapSec * 0.35,
+              s3_duration: defaultLapSec * 0.32,
               start_time: startTime,
               end_time: cumTime,
-              is_pit_out: false
+              is_pit_out: false,
+              is_pit_in: false
             });
           }
         }
@@ -1475,8 +1526,26 @@
           if (lapObj) {
             currentLapNumber = lapObj.lap_number;
             lapsCompleted = lapObj.lap_number - 1;
-            const frac = (timestamp - lapObj.start_time) / lapObj.duration;
-            progressInLap = Math.min(0.999, Math.max(0.0, frac));
+
+            const elapsedLap = timestamp - lapObj.start_time;
+            const s1Dur = lapObj.s1_duration || (lapObj.duration * 0.33);
+            const s2Dur = lapObj.s2_duration || (lapObj.duration * 0.35);
+            const s3Dur = lapObj.s3_duration || Math.max(0.1, lapObj.duration - (s1Dur + s2Dur));
+
+            if (elapsedLap <= s1Dur) {
+              // Sector 1: [0.000, 0.333]
+              const frac = s1Dur > 0 ? (elapsedLap / s1Dur) : 0;
+              progressInLap = 0.333 * Math.min(1.0, Math.max(0.0, frac));
+            } else if (elapsedLap <= s1Dur + s2Dur) {
+              // Sector 2: [0.333, 0.666]
+              const frac = s2Dur > 0 ? ((elapsedLap - s1Dur) / s2Dur) : 0;
+              progressInLap = 0.333 + 0.333 * Math.min(1.0, Math.max(0.0, frac));
+            } else {
+              // Sector 3 & Pit Lane: [0.666, 0.999]
+              const frac = s3Dur > 0 ? ((elapsedLap - s1Dur - s2Dur) / s3Dur) : 0;
+              progressInLap = 0.666 + 0.333 * Math.min(0.999, Math.max(0.0, frac));
+            }
+
             totalProgress = lapsCompleted + progressInLap;
           } else {
             const lastLap = d.laps[d.laps.length - 1];
@@ -1620,10 +1689,17 @@
         applyDVRState(dvrState.currentTimestamp);
       }
 
-      // Smooth Linear Interpolation towards targets
+      // Smooth Linear Interpolation towards targets with teleport guard
       lerpDriversMap.forEach(driver => {
-        driver.currentX += (driver.targetX - driver.currentX) * 0.15;
-        driver.currentY += (driver.targetY - driver.currentY) * 0.15;
+        const distSq = (driver.targetX - driver.currentX) ** 2 + (driver.targetY - driver.currentY) ** 2;
+        if (distSq > 0.005) {
+          // Snap directly if distance is large (scrubbing or lap wrap)
+          driver.currentX = driver.targetX;
+          driver.currentY = driver.targetY;
+        } else {
+          driver.currentX += (driver.targetX - driver.currentX) * 0.25;
+          driver.currentY += (driver.targetY - driver.currentY) * 0.25;
+        }
       });
 
       if (activeVisualizer === '2d') {
