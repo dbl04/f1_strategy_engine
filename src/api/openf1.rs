@@ -187,11 +187,16 @@ pub struct OpenF1Interval {
 /// OpenF1 Stint model.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 pub struct OpenF1Stint {
-    pub session_key: u64,
-    pub driver_number: u32,
-    pub stint_number: u32,
-    pub compound: String,
-    pub tyre_age_at_start: u32,
+    #[serde(default)]
+    pub session_key: Option<u64>,
+    #[serde(default)]
+    pub driver_number: Option<u32>,
+    #[serde(default)]
+    pub stint_number: Option<u32>,
+    #[serde(default)]
+    pub compound: Option<String>,
+    #[serde(default)]
+    pub tyre_age_at_start: Option<u32>,
     #[serde(default)]
     pub lap_start: Option<u32>,
     #[serde(default)]
@@ -702,7 +707,7 @@ impl OpenF1Client {
                 .map(|p| p.position)
                 .unwrap_or((idx + 1) as u32);
             let interval_obj = intervals.iter().find(|i| i.driver_number == d_no);
-            let stint_obj = stints.iter().find(|s| s.driver_number == d_no);
+            let stint_obj = stints.iter().find(|s| s.driver_number == Some(d_no));
             let loc_obj = locations.iter().find(|l| l.driver_number == d_no);
 
             let gap = if pos == 1 {
@@ -732,9 +737,9 @@ impl OpenF1Client {
             };
 
             let compound = stint_obj
-                .map(|s| s.compound.clone())
+                .and_then(|s| s.compound.clone())
                 .unwrap_or_else(|| "MEDIUM".to_string());
-            let tyre_age = stint_obj.map(|s| s.tyre_age_at_start).unwrap_or(0);
+            let tyre_age = stint_obj.and_then(|s| s.tyre_age_at_start).unwrap_or(0);
 
             drivers.push(LiveDriverState {
                 driver_number: d_no,
@@ -862,32 +867,52 @@ fn generate_fallback_gps_telemetry(_session_key: u64) -> Vec<DriverGpsSample> {
 }
 
 fn generate_fallback_laps(_session_key: u64) -> Vec<OpenF1Lap> {
-    vec![
-        OpenF1Lap {
-            lap_number: 1,
-            driver_number: 1,
-            lap_duration: Some(81.420),
-            duration_sector_1: Some(27.1),
-            duration_sector_2: Some(27.3),
-            duration_sector_3: Some(27.02),
-            is_pit_out_lap: Some(false),
-            stint: Some(1),
-            compound: Some("MEDIUM".to_string()),
-            date_start: Some("2026-03-15T05:00:00+00:00".to_string()),
-        },
-        OpenF1Lap {
-            lap_number: 2,
-            driver_number: 1,
-            lap_duration: Some(81.110),
-            duration_sector_1: Some(27.0),
-            duration_sector_2: Some(27.2),
-            duration_sector_3: Some(26.91),
-            is_pit_out_lap: Some(false),
-            stint: Some(1),
-            compound: Some("MEDIUM".to_string()),
-            date_start: Some("2026-03-15T05:01:21+00:00".to_string()),
-        },
-    ]
+    let drivers = [
+        1, 3, 5, 6, 10, 11, 12, 14, 16, 18, 23, 27, 30, 31, 41, 43, 44, 55, 63, 77, 81, 87,
+    ];
+    let mut laps = Vec::with_capacity(drivers.len() * 53);
+    for (idx, &d_no) in drivers.iter().enumerate() {
+        let base_lap = 88.0 + (idx as f64) * 0.35;
+        let pit_lap = 20 + (idx % 6) as u32;
+        for lap_num in 1..=53 {
+            let is_pit_in = lap_num == pit_lap;
+            let is_pit_out = lap_num == pit_lap + 1;
+            let stint = if lap_num <= pit_lap { 1 } else { 2 };
+            let compound = if stint == 1 {
+                if idx % 2 == 0 { "MEDIUM" } else { "HARD" }
+            } else if idx % 2 == 0 {
+                "HARD"
+            } else {
+                "MEDIUM"
+            };
+
+            let duration = if is_pit_in {
+                base_lap + 22.5
+            } else if is_pit_out {
+                base_lap + 3.0
+            } else {
+                base_lap + ((lap_num as f64 * 0.05).sin() * 0.4)
+            };
+
+            laps.push(OpenF1Lap {
+                lap_number: lap_num,
+                driver_number: d_no,
+                lap_duration: Some(duration),
+                duration_sector_1: Some(duration * 0.33),
+                duration_sector_2: Some(duration * 0.35),
+                duration_sector_3: Some(duration * 0.32),
+                is_pit_out_lap: Some(is_pit_out),
+                stint: Some(stint),
+                compound: Some(compound.to_string()),
+                date_start: Some(format!(
+                    "2026-03-15T05:{:02}:{:02}+00:00",
+                    (lap_num * 88 / 60) % 60,
+                    (lap_num * 88) % 60
+                )),
+            });
+        }
+    }
+    laps
 }
 
 fn generate_fallback_positions(session_key: u64) -> Vec<OpenF1Position> {
@@ -930,15 +955,15 @@ fn generate_fallback_stints(session_key: u64) -> Vec<OpenF1Stint> {
     drivers
         .iter()
         .map(|&no| OpenF1Stint {
-            session_key,
-            driver_number: no,
-            stint_number: 1,
-            compound: if no % 2 == 0 {
+            session_key: Some(session_key),
+            driver_number: Some(no),
+            stint_number: Some(1),
+            compound: Some(if no % 2 == 0 {
                 "HARD".to_string()
             } else {
                 "MEDIUM".to_string()
-            },
-            tyre_age_at_start: 0,
+            }),
+            tyre_age_at_start: Some(0),
             lap_start: Some(1),
             lap_end: Some(53),
         })
