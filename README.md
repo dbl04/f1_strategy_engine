@@ -5,6 +5,7 @@
 [![Rayon](https://img.shields.io/badge/Concurrency-Rayon-red)](https://github.com/rayon-rs/rayon)
 [![OpenAPI](https://img.shields.io/badge/API_Docs-Swagger_UI-green)](https://swagger.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI/CD Pipeline](https://github.com/dbl04/f1_strategy_engine/actions/workflows/ci.yml/badge.svg)](https://github.com/dbl04/f1_strategy_engine/actions)
 
 A mission-critical, high-performance Formula 1 race strategy digital twin and real-time telemetry playback engine built in **Rust** and **Axum**. The engine combines non-linear physics modeling, dynamic programming for pit window solving, and parallelized Monte Carlo simulations to quantify tactical decision risks in real-time.
 
@@ -14,36 +15,14 @@ Telemetry ingestion is decoupled and rate-shielded from the OpenF1 REST API, ser
 
 ## ⚡ Key Architectural Highlights
 
-```text
-                          [OpenF1 API / Ingestion Stream]
-                                         │
-                         (Rate-Limit Shielding & Caching)
-                                         ▼
-                   ┌───────────────────────────────────────────┐
-                   │           Rust / Axum DVR Buffer          │
-                   │      (In-Memory Continuous Session Data)  │
-                   └──────┬─────────────────────────────┬──────┘
-                          │                             │
-       ┌──────────────────┴─────────────┐ ┌─────────────┴─────────────────┐
-       ▼                                ▼ ▼                               ▼
-┌──────────────────────────────┐ ┌────────────────────────────────────────┐
-│  Physics & Degradation Engine│ │  Parallel Monte Carlo Engine (Rayon)   │
-│  - Non-linear tyre curves    │ │  - 10,000+ stochastic race runs        │
-│  - Mass burn-off (-0.035s)   │ │  - Dynamic Safety Car / VSC triggers   │
-│  - Dynamic air wake loss     │ │  - P10 Best-Case & P90 Risk Floor      │
-└──────────────────────────────┘ └────────────────────────────────────────┘
-                          │                             │
-                          └──────────────┬──────────────┘
-                                         ▼
-                      [Sub-millisecond State Delivery]
-                                         │
-                                         ▼
-                     ┌──────────────────────────────────────┐
-                     │ 60 FPS HTML5 Canvas Telemetry Client │
-                     │  - Arc-Length Closed-Loop Projection │
-                     │  - 2D Cartesian Circuit & Phase Ring │
-                     │  - Scrubbable Multi-Speed DVR Engine │
-                     └──────────────────────────────────────┘
+```mermaid
+flowchart TD
+    API["OpenF1 API / Ingestion Stream"] -->|"Rate-Limit Shielding & Caching"| DVR["Rust / Axum DVR Buffer<br/>(In-Memory Continuous Session Data)"]
+    DVR --> PHYS["Physics & Degradation Engine<br/>• Non-linear tyre curves<br/>• Mass burn-off (-0.035s)<br/>• Dynamic air wake loss"]
+    DVR --> MC["Parallel Monte Carlo Engine (Rayon)<br/>• 10,000+ stochastic race runs<br/>• Dynamic Safety Car / VSC triggers<br/>• P10 Best-Case & P90 Risk Floor"]
+    PHYS --> DELIV["Sub-millisecond State Delivery"]
+    MC --> DELIV
+    DELIV --> UI["60 FPS HTML5 Canvas Telemetry Client<br/>• Arc-Length Closed-Loop Projection<br/>• 2D Cartesian Circuit & Phase Ring<br/>• Scrubbable Multi-Speed DVR Engine"]
 ```
 
 ### 1. Stochastic Strategy Optimization (Rayon Concurrency)
