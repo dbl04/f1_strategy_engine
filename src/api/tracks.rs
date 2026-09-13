@@ -2,7 +2,7 @@
 
 use axum::{
     extract::Path,
-    http::{header, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
 };
 
@@ -16,9 +16,18 @@ pub fn get_track_geometry(track_id: &str) -> Option<&'static str> {
         "monza" | "it 1922" | "it1922" | "italy" | "autodromo nazionale monza" => {
             Some(include_str!("../../assets/tracks/it-1922.geojson"))
         }
-        "silverstone" | "gb 1948" | "gb1948" | "uk" | "britain" | "great britain"
+        "silverstone"
+        | "gb 1948"
+        | "gb1948"
+        | "uk"
+        | "britain"
+        | "great britain"
         | "silverstone circuit" => Some(include_str!("../../assets/tracks/gb-1948.geojson")),
-        "spa" | "be 1925" | "be1925" | "spa francorchamps" | "belgium"
+        "spa"
+        | "be 1925"
+        | "be1925"
+        | "spa francorchamps"
+        | "belgium"
         | "circuit de spa francorchamps" => {
             Some(include_str!("../../assets/tracks/be-1925.geojson"))
         }
@@ -37,9 +46,12 @@ pub fn get_track_geometry(track_id: &str) -> Option<&'static str> {
         "singapore" | "sg 2008" | "sg2008" | "marina bay" | "marina bay street circuit" => {
             Some(include_str!("../../assets/tracks/sg-2008.geojson"))
         }
-        "melbourne" | "au 1953" | "au1953" | "albert park" | "albert park circuit" | "australia" => {
-            Some(include_str!("../../assets/tracks/au-1953.geojson"))
-        }
+        "melbourne"
+        | "au 1953"
+        | "au1953"
+        | "albert park"
+        | "albert park circuit"
+        | "australia" => Some(include_str!("../../assets/tracks/au-1953.geojson")),
         "shanghai" | "cn 2004" | "cn2004" | "china" | "shanghai international circuit" => {
             Some(include_str!("../../assets/tracks/cn-2004.geojson"))
         }
@@ -52,7 +64,11 @@ pub fn get_track_geometry(track_id: &str) -> Option<&'static str> {
         "montreal" | "ca 1978" | "ca1978" | "canada" | "circuit gilles villeneuve" => {
             Some(include_str!("../../assets/tracks/ca-1978.geojson"))
         }
-        "barcelona" | "es 1991" | "es1991" | "spain" | "catalunya"
+        "barcelona"
+        | "es 1991"
+        | "es1991"
+        | "spain"
+        | "catalunya"
         | "circuit de barcelona catalunya" => {
             Some(include_str!("../../assets/tracks/es-1991.geojson"))
         }

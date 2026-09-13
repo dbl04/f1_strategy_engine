@@ -108,6 +108,3 @@ pub struct MultiStrategyResponse {
     #[serde(default)]
     pub safety_car_probability_per_lap: f64,
 }
-
-
-

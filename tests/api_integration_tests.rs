@@ -99,4 +99,3 @@ async fn test_circuit_geometry_by_id_endpoint() {
         .unwrap();
     assert!(!body.is_empty());
 }
-

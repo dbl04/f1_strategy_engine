@@ -1,9 +1,9 @@
 //! Application error handling module providing strongly-typed error variants and Axum HTTP response conversion.
 
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
 
@@ -45,4 +45,3 @@ impl IntoResponse for AppError {
         (status, body).into_response()
     }
 }
-

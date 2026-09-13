@@ -26,4 +26,3 @@ pub fn is_valid_f1_strategy(ego_car: &EgoCar, new_compounds: &[TireCompound]) ->
 
     false
 }
-

@@ -75,11 +75,7 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
             TireCompound::Wet,
             TireCompound::Medium,
         ],
-        _ => vec![
-            TireCompound::Soft,
-            TireCompound::Medium,
-            TireCompound::Hard,
-        ],
+        _ => vec![TireCompound::Soft, TireCompound::Medium, TireCompound::Hard],
     };
 
     let mut evaluated_strategies: Vec<StrategyOption> = Vec::new();
@@ -278,19 +274,19 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         }
     }
 
-    evaluated_strategies.sort_by(|a, b| {
-        match (a.is_valid_f1_rules, b.is_valid_f1_rules) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a
-                .projected_total_time_seconds
-                .partial_cmp(&b.projected_total_time_seconds)
-                .unwrap_or(std::cmp::Ordering::Equal),
-        }
+    evaluated_strategies.sort_by(|a, b| match (a.is_valid_f1_rules, b.is_valid_f1_rules) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a
+            .projected_total_time_seconds
+            .partial_cmp(&b.projected_total_time_seconds)
+            .unwrap_or(std::cmp::Ordering::Equal),
     });
 
     let mut optimal = evaluated_strategies[0].clone();
-    optimal.monte_carlo_metrics = Some(crate::engine::monte_carlo::run_monte_carlo_simulation(state, &optimal, 5000));
+    optimal.monte_carlo_metrics = Some(crate::engine::monte_carlo::run_monte_carlo_simulation(
+        state, &optimal, 5000,
+    ));
     let min_time = optimal.projected_total_time_seconds;
 
     let mut alternatives: Vec<StrategyOption> = Vec::new();
@@ -298,10 +294,11 @@ pub fn optimize_race_strategies(state: &RaceState) -> MultiStrategyResponse {
         let mut alt = strat;
         alt.delta_to_optimal_seconds =
             ((alt.projected_total_time_seconds - min_time) * 100.0).round() / 100.0;
-        alt.monte_carlo_metrics = Some(crate::engine::monte_carlo::run_monte_carlo_simulation(state, &alt, 1000));
+        alt.monte_carlo_metrics = Some(crate::engine::monte_carlo::run_monte_carlo_simulation(
+            state, &alt, 1000,
+        ));
         alternatives.push(alt);
     }
-
 
     let summary = format!(
         "Optimal Strategy: '{}' with projected time of {}. (Simulated {} laps remaining).",
@@ -492,4 +489,3 @@ mod tests {
         assert!(response.optimal_strategy.total_pit_stops > 0);
     }
 }
-

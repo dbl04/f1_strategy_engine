@@ -58,4 +58,3 @@ pub struct RaceState {
     #[serde(default)]
     pub weather_forecast: Option<WeatherForecast>,
 }
-

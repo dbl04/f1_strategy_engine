@@ -57,11 +57,17 @@ pub fn calculate_pit_stop_loss(
         match environment {
             TrackStatus::SafetyCar => {
                 pit_loss *= 0.60;
-                reasons.push(format!("Safety Car cheap pit stop discount (-{:.1}s)", base_loss * 0.40));
+                reasons.push(format!(
+                    "Safety Car cheap pit stop discount (-{:.1}s)",
+                    base_loss * 0.40
+                ));
             }
             TrackStatus::VirtualSafetyCar => {
                 pit_loss *= 0.70;
-                reasons.push(format!("VSC cheap pit stop discount (-{:.1}s)", base_loss * 0.30));
+                reasons.push(format!(
+                    "VSC cheap pit stop discount (-{:.1}s)",
+                    base_loss * 0.30
+                ));
             }
             _ => {
                 reasons.push("Standard pit stop loss".to_string());
@@ -78,7 +84,10 @@ pub fn calculate_pit_stop_loss(
 
     if time_penalty_seconds > 0.0 {
         pit_loss += time_penalty_seconds;
-        reasons.push(format!("Served time penalty (+{:.1}s)", time_penalty_seconds));
+        reasons.push(format!(
+            "Served time penalty (+{:.1}s)",
+            time_penalty_seconds
+        ));
     }
 
     (pit_loss, reasons)
@@ -147,12 +156,16 @@ pub fn simulate_stint(
                 _ => {}
             },
             WeatherState::Damp => match compound {
-                TireCompound::Soft | TireCompound::Medium | TireCompound::Hard => weather_penalty += 15.0,
+                TireCompound::Soft | TireCompound::Medium | TireCompound::Hard => {
+                    weather_penalty += 15.0
+                }
                 TireCompound::Intermediate => weather_penalty += 0.0,
                 TireCompound::Wet => weather_penalty += 5.0,
             },
             WeatherState::Wet => match compound {
-                TireCompound::Soft | TireCompound::Medium | TireCompound::Hard => weather_penalty += 30.0,
+                TireCompound::Soft | TireCompound::Medium | TireCompound::Hard => {
+                    weather_penalty += 30.0
+                }
                 TireCompound::Intermediate => weather_penalty += 5.0,
                 TireCompound::Wet => weather_penalty += 0.0,
             },
@@ -161,7 +174,12 @@ pub fn simulate_stint(
         let lap_time = match environment {
             TrackStatus::RedFlag => 0.0,
             TrackStatus::SafetyCar | TrackStatus::VirtualSafetyCar => {
-                90.0 + deg + 30.0 + fuel_effect + track_evolution + dirty_air_penalty + weather_penalty
+                90.0 + deg
+                    + 30.0
+                    + fuel_effect
+                    + track_evolution
+                    + dirty_air_penalty
+                    + weather_penalty
             }
             TrackStatus::Green | TrackStatus::Yellow => {
                 90.0 + deg + fuel_effect + track_evolution + dirty_air_penalty + weather_penalty
@@ -184,7 +202,15 @@ mod tests {
 
     #[test]
     fn test_simulate_stint() {
-        let (time, deg) = simulate_stint(1, 10, &TireCompound::Soft, 0, &TrackStatus::Green, &[], &None);
+        let (time, deg) = simulate_stint(
+            1,
+            10,
+            &TireCompound::Soft,
+            0,
+            &TrackStatus::Green,
+            &[],
+            &None,
+        );
         assert!(time > 0.0);
         assert!(deg > 0.0);
     }
@@ -204,8 +230,8 @@ mod tests {
 
     #[test]
     fn test_vsc_pit_loss() {
-        let (loss, _) = calculate_pit_stop_loss(20.0, &TrackStatus::VirtualSafetyCar, false, 0.0, true);
+        let (loss, _) =
+            calculate_pit_stop_loss(20.0, &TrackStatus::VirtualSafetyCar, false, 0.0, true);
         assert_eq!(loss, 14.0); // 20.0 * 0.7
     }
 }
-

@@ -28,7 +28,11 @@ pub fn run_monte_carlo_simulation(
             expected_time_seconds: strategy.projected_total_time_seconds,
             p10_time_seconds: strategy.projected_total_time_seconds * 0.98,
             p90_time_seconds: strategy.projected_total_time_seconds * 1.02,
-            win_probability_pct: if strategy.delta_to_optimal_seconds == 0.0 { 95.0 } else { 20.0 },
+            win_probability_pct: if strategy.delta_to_optimal_seconds == 0.0 {
+                95.0
+            } else {
+                20.0
+            },
             risk_score: strategy.projected_total_time_seconds * 0.04,
         };
     }

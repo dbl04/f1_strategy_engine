@@ -74,4 +74,3 @@ pub struct CircuitInfo {
     /// Historical Safety Car likelihood rating.
     pub historical_sc_probability: f64,
 }
-

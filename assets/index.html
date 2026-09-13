@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>F1 PIT WALL TELEMETRY & STRATEGY SYSTEM | Cosworth Pi / McLaren ATLAS</title>
+  <title>F1 PIT WALL DIGITAL TWIN | McLaren ATLAS / Cosworth Pi Telemetry</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -178,7 +178,6 @@
       animation: pulse 1s infinite alternate;
     }
 
-    /* Accordion Layout */
     .gp-accordion-container {
       display: flex;
       flex-direction: column;
@@ -262,7 +261,7 @@
 
     main {
       display: grid;
-      grid-template-columns: 350px 1fr 400px;
+      grid-template-columns: 360px 1fr 400px;
       height: calc(100vh - 40px);
       background-color: var(--bg-black);
       overflow: hidden;
@@ -320,19 +319,28 @@
       background: var(--bg-surface);
       color: var(--text-muted);
       text-align: left;
-      padding: 5px 6px;
+      padding: 6px 6px;
       border-bottom: 1px solid var(--border-dark);
       font-weight: 600;
       z-index: 2;
     }
 
     .timing-table td {
-      padding: 5px 6px;
+      padding: 6px 6px;
       border-bottom: 1px solid #111116;
     }
 
-    .timing-table tr.ego-row {
-      background-color: rgba(168, 85, 247, 0.15);
+    .timing-table tr {
+      cursor: pointer;
+      transition: background-color 0.1s ease;
+    }
+
+    .timing-table tr:hover {
+      background-color: #12121c;
+    }
+
+    .timing-table tr.followed-row {
+      background-color: rgba(168, 85, 247, 0.2) !important;
       border-left: 3px solid var(--color-purple);
     }
 
@@ -365,7 +373,7 @@
       flex-direction: column;
     }
 
-    #trackCanvas {
+    #trackCanvas, #ringCanvas {
       width: 100%;
       flex: 1;
       background: #020204;
@@ -383,6 +391,24 @@
       width: 100%;
       flex: 1;
       display: block;
+    }
+
+    /* Dual Display Toggle Buttons */
+    .viz-toggle-btn {
+      background: #111118;
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+
+    .viz-toggle-btn.active {
+      background: var(--color-purple);
+      color: #000;
+      border-color: var(--color-purple);
     }
 
     /* Right Panel Tabs */
@@ -430,7 +456,7 @@
       display: block;
     }
 
-    /* Controls & Form Elements */
+    /* Form Controls */
     .control-group {
       margin-bottom: 12px;
     }
@@ -459,8 +485,11 @@
       outline: none;
     }
 
-    input:focus, select:focus {
-      border-color: var(--color-purple);
+    input:disabled, select:disabled {
+      background: #0d0d14;
+      border-color: #222230;
+      color: #aaaacc;
+      cursor: not-allowed;
     }
 
     .action-btn {
@@ -539,26 +568,26 @@
   <div id="landingView" class="app-view">
     <header>
       <div class="brand-title">
-        <span>PIT WALL</span> F1 STRATEGY & TELEMETRY ENGINE — 2026 CALENDAR
+        <span>PIT WALL</span> F1 STRATEGY & TELEMETRY DIGITAL TWIN
       </div>
       <div class="header-metrics">
-        <div>STATUS: <span style="color: var(--color-green)">OPENF1 CONNECTED</span></div>
+        <div>SEASON: <span style="color: var(--color-purple)">2026 / 2025 OPENF1</span></div>
       </div>
     </header>
 
     <div class="panel-content" style="padding: 24px;">
       <div class="landing-header">
         <div>
-          <div class="landing-title">GRAND PRIX WEEKEND SESSIONS</div>
-          <div class="landing-subtitle">Expand a Grand Prix weekend to select session telemetry or launch live radar tracking</div>
+          <div class="landing-title">HISTORICAL & LIVE SESSION DISCOVERY</div>
+          <div class="landing-subtitle">Expand a Grand Prix weekend to bind session key and generate OpenF1 Reference Lap X/Y track geometry</div>
         </div>
-        <button class="nav-btn" onclick="fetchSessions()">🔄 REFRESH CALENDAR</button>
+        <button class="nav-btn" onclick="fetchSessions()">🔄 REFRESH SESSIONS</button>
       </div>
 
       <div id="liveBanner" class="hidden"></div>
 
       <div id="accordionContainer" class="gp-accordion-container">
-        <!-- Dynamic GP Weekend Accordions -->
+        <!-- Dynamic GP Accordions -->
       </div>
     </div>
   </div>
@@ -567,38 +596,26 @@
   <div id="dashboardView" class="app-view hidden">
     <header>
       <div style="display: flex; align-items: center; gap: 16px;">
-        <button class="nav-btn" onclick="showLandingView()">← RACE SELECT</button>
+        <button class="nav-btn" onclick="showLandingView()">← SESSION SELECT</button>
         <div class="brand-title">
-          <span>PIT WALL</span> <span id="dashSessionTitle">MONZA GRAND PRIX</span>
+          <span>PIT WALL</span> <span id="dashSessionTitle">GRAND PRIX</span>
         </div>
       </div>
 
       <div class="header-metrics">
-        <div>
-          <label style="color: var(--text-muted); font-size: 10px;">FOLLOW DRIVER: </label>
-          <select id="followDriverSelect" style="width: 110px; padding: 2px 4px; font-size: 10px; display: inline-block;" onchange="onFollowDriverChanged()">
-            <option value="">(NONE)</option>
-            <option value="1">#1 VER</option>
-            <option value="4">#4 NOR</option>
-            <option value="16">#16 LEC</option>
-            <option value="81">#81 PIA</option>
-            <option value="63">#63 RUS</option>
-            <option value="44">#44 HAM</option>
-            <option value="14">#14 ALO</option>
-          </select>
-        </div>
-        <div>TRACK TEMP: <span style="color: var(--color-yellow)">38.4°C</span></div>
-        <div>AIR TEMP: <span style="color: var(--color-cyan)">24.1°C</span></div>
+        <div>FOLLOWING: <span style="color: var(--color-purple); font-weight: 800;" id="followedDriverBadge">#1 VER</span></div>
+        <div>TRACK TEMP: <span style="color: var(--color-yellow)" id="headerTrackTemp">38.4°C</span></div>
+        <div>AIR TEMP: <span style="color: var(--color-cyan)" id="headerAirTemp">24.1°C</span></div>
         <div id="statusBadge" class="status-badge status-green">TRACK STATUS: GREEN</div>
       </div>
     </header>
 
     <main>
-      <!-- LEFT PANEL: 22-DRIVER TIMING TOWER -->
+      <!-- LEFT PANEL: LIVE DEDUPLICATED TIMING TOWER -->
       <div class="panel">
         <div class="panel-header">
-          <span>TIMING & TRAFFIC TOWER (22 DRIVERS)</span>
-          <span>LAP <span id="currentLapDisplay">15</span>/53</span>
+          <span>LIVE TIMING TOWER (CLICK ROW TO FOLLOW)</span>
+          <span>SESSION <span id="dashSessionKeyDisplay">9000</span></span>
         </div>
         <div class="tower-scroll-container">
           <table class="timing-table">
@@ -607,39 +624,43 @@
                 <th>POS</th>
                 <th>NO</th>
                 <th>DRIVER</th>
+                <th>GAP</th>
+                <th>INT</th>
                 <th>TYRE</th>
                 <th>AGE</th>
-                <th>GAP</th>
-                <th>STOP</th>
               </tr>
             </thead>
             <tbody id="timingTowerBody">
-              <!-- Populated dynamically -->
+              <!-- Deduplicated unique driver records -->
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- CENTER PANEL: LIVE MAP RADAR (60%) & TELEMETRY TRACES (40%) -->
+      <!-- CENTER PANEL: DUAL DISPLAY VISUALIZERS (2D MAP + CIRCULAR LAP RING) -->
       <div class="panel center-panel-wrapper">
         <div class="canvas-container">
           <div class="panel-header">
-            <span>LIVE CIRCUIT MAP RADAR (PATH2D CACHED VECTOR + 22 DRIVER DOTS)</span>
-            <span id="circuitNameDisplay">AUTODROMO NAZIONALE MONZA</span>
+            <span>VISUALIZER DUAL DISPLAY</span>
+            <div style="display: flex; gap: 6px;">
+              <button id="btnViz2D" class="viz-toggle-btn active" onclick="switchVisualizer('2d')">🏁 2D CIRCUIT MAP</button>
+              <button id="btnVizRing" class="viz-toggle-btn" onclick="switchVisualizer('ring')">⭕ CIRCULAR LAP RING</button>
+            </div>
           </div>
           <canvas id="trackCanvas"></canvas>
+          <canvas id="ringCanvas" class="hidden"></canvas>
         </div>
 
         <div class="telemetry-container">
           <div class="panel-header" style="background: transparent;">
             <span>TELEMETRY TRACES (SPEED / THROTTLE / BRAKE)</span>
-            <span style="color: var(--color-cyan)">OPENF1 TRACE: LAP 15</span>
+            <span style="color: var(--color-cyan)">OPENF1 TRACE</span>
           </div>
           <canvas id="telemetryCanvas"></canvas>
         </div>
       </div>
 
-      <!-- RIGHT PANEL: TABBED CONTROLS -->
+      <!-- RIGHT PANEL: LOCKED STRATEGY DIGITAL TWIN -->
       <div class="panel">
         <div class="tab-bar">
           <button class="tab-btn active" onclick="switchTab('tabStrategy')">OPTIMIZER</button>
@@ -650,31 +671,19 @@
         <!-- TAB 1: STRATEGY OPTIMIZER -->
         <div id="tabStrategy" class="tab-content active">
           <div class="control-group">
-            <label>Circuit Identifier</label>
-            <select id="trackSelect" onchange="onCircuitSelected()">
-              <option value="monza">Monza (Autodromo Nazionale Monza)</option>
-              <option value="silverstone">Silverstone Circuit</option>
-              <option value="spa">Circuit de Spa-Francorchamps</option>
-              <option value="monaco">Circuit de Monaco</option>
-              <option value="bahrain">Bahrain International Circuit</option>
-              <option value="suzuka">Suzuka Circuit</option>
-              <option value="cota">Circuit of the Americas</option>
-              <option value="singapore">Marina Bay Street Circuit</option>
-              <option value="melbourne">Melbourne (Albert Park)</option>
-              <option value="shanghai">Shanghai Circuit</option>
-              <option value="madrid">Madrid GP</option>
-            </select>
+            <label>Active Session Key (Bound)</label>
+            <input type="text" id="boundSessionKey" value="9000" disabled>
           </div>
 
           <div class="control-group">
             <div class="input-row">
               <div>
-                <label>Current Lap</label>
-                <input type="number" id="currentLapInput" value="15" min="1" max="78" onchange="runSimulation()">
+                <label>Current Lap (Locked)</label>
+                <input type="number" id="currentLapInput" value="15" disabled>
               </div>
               <div>
-                <label>Tire Age</label>
-                <input type="number" id="tireAgeInput" value="15" min="0" max="60" onchange="runSimulation()">
+                <label>Tire Age (Locked from Stint)</label>
+                <input type="number" id="tireAgeInput" value="15" disabled>
               </div>
             </div>
           </div>
@@ -682,8 +691,8 @@
           <div class="control-group">
             <div class="input-row">
               <div>
-                <label>Current Compound</label>
-                <select id="tireSelect" onchange="runSimulation()">
+                <label>Current Compound (Locked)</label>
+                <select id="tireSelect" disabled>
                   <option value="Medium">Medium</option>
                   <option value="Soft">Soft</option>
                   <option value="Hard">Hard</option>
@@ -692,8 +701,8 @@
                 </select>
               </div>
               <div>
-                <label>Track Status</label>
-                <select id="envSelect" onchange="runSimulation()">
+                <label>Track Status (Locked from RC)</label>
+                <select id="envSelect" disabled>
                   <option value="Green">Green Flag</option>
                   <option value="SafetyCar">Safety Car (SC)</option>
                   <option value="VirtualSafetyCar">Virtual Safety Car (VSC)</option>
@@ -703,18 +712,7 @@
             </div>
           </div>
 
-          <div class="control-group">
-            <div class="input-row" style="margin-top: 4px;">
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="wingDamage" style="width: auto;" onchange="runSimulation()"> Wing Damage (+10s)
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="mandatoryDone" style="width: auto;" checked onchange="runSimulation()"> Mandatory Stop Done
-              </label>
-            </div>
-          </div>
-
-          <button class="action-btn" onclick="runSimulation()">Run Parallel Monte Carlo Optimization</button>
+          <button class="action-btn" onclick="runSimulation()">Run Strategy Simulation (Digital Twin)</button>
 
           <div id="alertBox" style="margin-top: 10px;"></div>
 
@@ -731,43 +729,32 @@
         <!-- TAB 2: TELEMETRY -->
         <div id="tabTelemetry" class="tab-content">
           <div class="control-group">
-            <label>Selected Session Key</label>
-            <input type="text" id="telemetrySessionKey" value="9000" readonly>
-          </div>
-
-          <div class="control-group">
-            <label>Target Driver</label>
-            <select id="telemetryDriver" onchange="onFollowDriverChanged()">
-              <option value="1">#1 VER (Max Verstappen)</option>
-              <option value="4">#4 NOR (Lando Norris)</option>
-              <option value="16">#16 LEC (Charles Leclerc)</option>
-              <option value="81">#81 PIA (Oscar Piastri)</option>
-              <option value="44">#44 HAM (Lewis Hamilton)</option>
-            </select>
+            <label>Followed Driver Number</label>
+            <input type="text" id="telemetryDriverNo" value="1" disabled>
           </div>
 
           <button class="action-btn" onclick="replayOpenF1State()">Replay Telemetry to Engine State</button>
 
           <div style="margin-top: 16px;">
             <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
-              <span>LAP TELEMETRY TRACE SUMMARY</span>
+              <span>OPENF1 TELEMETRY METRICS</span>
             </div>
             <div class="matrix-card">
               <div class="stat-grid">
                 <div class="stat-box">
                   <div class="stat-label">TOP SPEED</div>
-                  <div class="stat-val" id="telemetryMaxSpeed">348.2 km/h</div>
+                  <div class="stat-val">348.2 km/h</div>
                 </div>
                 <div class="stat-box">
                   <div class="stat-label">AVG THROTTLE</div>
-                  <div class="stat-val" style="color: var(--color-green)" id="telemetryAvgThrottle">78.4%</div>
+                  <div class="stat-val" style="color: var(--color-green)">78.4%</div>
                 </div>
                 <div class="stat-box">
-                  <div class="stat-label">BRAKE HEAVY ZONES</div>
-                  <div class="stat-val" style="color: var(--color-red)">3 ZONES</div>
+                  <div class="stat-label">BRAKE ZONES</div>
+                  <div class="stat-val" style="color: var(--color-red)">3 HEAVY</div>
                 </div>
                 <div class="stat-box">
-                  <div class="stat-label">DRS DEPLOYMENT</div>
+                  <div class="stat-label">DRS STATE</div>
                   <div class="stat-val" style="color: var(--color-purple)">AVAILABLE</div>
                 </div>
               </div>
@@ -778,31 +765,22 @@
         <!-- TAB 3: RACE CONTROL -->
         <div id="tabRaceControl" class="tab-content">
           <div class="control-group">
-            <label>Rapid Track Status Override</label>
-            <div class="input-row" style="margin-top: 4px;">
-              <button style="background: var(--color-green); color: #000; font-weight: 800;" onclick="setTrackStatus('Green')">GREEN</button>
-              <button style="background: var(--color-yellow); color: #000; font-weight: 800;" onclick="setTrackStatus('SafetyCar')">SC</button>
-              <button style="background: #eab308; color: #000; font-weight: 800;" onclick="setTrackStatus('VirtualSafetyCar')">VSC</button>
-            </div>
+            <label>Live OpenF1 Race Control Flag</label>
+            <input type="text" id="rcFlagDisplay" value="GREEN - TRACK CLEAR" disabled>
           </div>
 
           <div class="control-group" style="margin-top: 14px;">
-            <label>Ambient & Weather Parameters</label>
+            <label>Live Weather Telemetry</label>
             <div class="input-row">
               <div>
                 <label>Track Temp (°C)</label>
-                <input type="number" value="38.4" step="0.5">
+                <input type="number" id="rcTrackTemp" value="38.4" disabled>
               </div>
               <div>
                 <label>Air Temp (°C)</label>
-                <input type="number" value="24.1" step="0.5">
+                <input type="number" id="rcAirTemp" value="24.1" disabled>
               </div>
             </div>
-          </div>
-
-          <div class="control-group" style="margin-top: 14px;">
-            <label>Traffic / Dirty Air Penalty Factor</label>
-            <input type="range" min="0" max="100" value="25" style="width: 100%;">
           </div>
         </div>
       </div>
@@ -811,78 +789,81 @@
 
   <script>
     let currentSessionKey = 9000;
-    let currentSessionLocation = "monza";
+    let currentSessionLocation = "Monza";
+    let followedDriverNo = 1;
+    let activeVisualizer = "2d";
 
-    // 22-Driver Grid Scaffold
-    const DRIVER_GRID = [
-      { pos: "P1", no: "1", name: "VER", team: "Red Bull", comp: "MED", age: 15, gap: "LEADER", stops: 0 },
-      { pos: "P2", no: "4", name: "NOR", team: "McLaren", comp: "MED", age: 15, gap: "+2.140s", stops: 0 },
-      { pos: "P3", no: "16", name: "LEC", team: "Ferrari", comp: "HARD", age: 18, gap: "+5.812s", stops: 0 },
-      { pos: "P4", no: "81", name: "PIA", team: "McLaren", comp: "SOFT", age: 10, gap: "+12.450s", stops: 1 },
-      { pos: "P5", no: "63", name: "RUS", team: "Mercedes", comp: "HARD", age: 20, gap: "+18.910s", stops: 0 },
-      { pos: "P6", no: "44", name: "HAM", team: "Ferrari", comp: "MED", age: 12, gap: "+22.340s", stops: 1 },
-      { pos: "P7", no: "14", name: "ALO", team: "Aston Martin", comp: "HARD", age: 22, gap: "+31.050s", stops: 0 },
-      { pos: "P8", no: "18", name: "STR", team: "Aston Martin", comp: "MED", age: 14, gap: "+38.700s", stops: 1 },
-      { pos: "P9", no: "10", name: "GAS", team: "Alpine", comp: "HARD", age: 19, gap: "+44.120s", stops: 0 },
-      { pos: "P10", no: "31", name: "OCO", team: "Haas", comp: "MED", age: 16, gap: "+49.800s", stops: 1 },
-      { pos: "P11", no: "23", name: "ALB", team: "Williams", comp: "HARD", age: 24, gap: "+54.210s", stops: 0 },
-      { pos: "P12", no: "55", name: "SAI", team: "Williams", comp: "SOFT", age: 8, gap: "+58.900s", stops: 1 },
-      { pos: "P13", no: "27", name: "HUL", team: "Sauber", comp: "MED", age: 17, gap: "+1:02.140", stops: 1 },
-      { pos: "P14", no: "30", name: "LAW", team: "VCARB", comp: "HARD", age: 21, gap: "+1:08.300", stops: 0 },
-      { pos: "P15", no: "22", name: "TSU", team: "VCARB", comp: "SOFT", age: 11, gap: "+1:14.500", stops: 1 },
-      { pos: "P16", no: "87", name: "BEA", team: "Haas", comp: "MED", age: 13, gap: "+1:19.800", stops: 1 },
-      { pos: "P17", no: "12", name: "ANT", team: "Mercedes", comp: "HARD", age: 25, gap: "+1:24.100", stops: 0 },
-      { pos: "P18", no: "7", name: "DOO", team: "Alpine", comp: "SOFT", age: 9, gap: "+1:30.400", stops: 2 },
-      { pos: "P19", no: "5", name: "BOR", team: "Sauber", comp: "MED", age: 15, gap: "+1 LAPs", stops: 1 },
-      { pos: "P20", no: "3", name: "RIC", team: "Reserve", comp: "HARD", age: 26, gap: "+1 LAPs", stops: 1 },
-      { pos: "P21", no: "77", name: "BOT", team: "Reserve", comp: "MED", age: 18, gap: "+2 LAPs", stops: 2 },
-      { pos: "P22", no: "24", name: "ZHO", team: "Reserve", comp: "HARD", age: 28, gap: "+2 LAPs", stops: 1 }
-    ];
+    // In-Memory Deduplicated Driver State Map
+    const driverStateMap = new Map();
 
-    // High Performance Radar Map Engine
-    class RadarEngine {
+    const DRIVER_NAMES = {
+      1: "VER", 4: "NOR", 16: "LEC", 81: "PIA", 63: "RUS", 44: "HAM",
+      14: "ALO", 18: "STR", 10: "GAS", 31: "OCO", 23: "ALB", 55: "SAI",
+      27: "HUL", 30: "LAW", 22: "TSU", 87: "BEA", 12: "ANT", 7: "DOO",
+      5: "BOR", 3: "RIC", 77: "BOT", 24: "ZHO"
+    };
+
+    const TEAM_COLORS = {
+      1: '#3671C6', 4: '#FF8000', 81: '#FF8000', 16: '#E80020', 44: '#E80020',
+      63: '#27F4D2', 12: '#27F4D2', 14: '#229971', 18: '#229971', 10: '#0093CC',
+      7: '#0093CC', 31: '#B6BABD', 87: '#B6BABD', 23: '#64C4FF', 55: '#64C4FF',
+      27: '#52E252', 5: '#52E252', 22: '#6692FF', 30: '#6692FF',
+    };
+
+    // 1. OpenF1 Reference Lap X/Y Radar Map Engine (Strict Stroke, Sanitized)
+    class OpenF1RadarEngine {
       constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
         this.cachedPath2D = null;
-        this.coords = [];
+        this.refCoords = [];
         this.bounds = null;
         this.driverLocations = [];
-        this.followedDriver = null;
+        this.followedDriver = 1;
         this.pollingInterval = null;
         this.scale = 1.0;
         this.offsetX = 0;
         this.offsetY = 0;
       }
 
-      setTrackGeometry(geoJson) {
-        if (!geoJson || !geoJson.features) return;
-        this.coords = [];
-        geoJson.features.forEach(f => {
-          if (f.geometry && f.geometry.type === 'LineString') {
-            this.coords.push(...f.geometry.coordinates);
-          } else if (f.geometry && f.geometry.type === 'MultiLineString') {
-            f.geometry.coordinates.forEach(line => this.coords.push(...line));
+      async loadReferenceLapMap(sessionKey) {
+        this.refCoords = [];
+        this.cachedPath2D = null;
+
+        try {
+          const resp = await fetch(`/api/openf1/location?session_key=${sessionKey}`);
+          if (resp.ok) {
+            const locs = await resp.json();
+            if (locs.length > 0) {
+              // Sanitize coordinates: strip (0,0) and extreme outliers
+              this.refCoords = locs
+                .filter(l => (l.x !== 0 || l.y !== 0) && Math.abs(l.x) < 100000 && Math.abs(l.y) < 100000)
+                .map(l => ({ x: l.x, y: l.y }));
+              
+              this.calculateBounds();
+              this.rebuildPath2D();
+            }
           }
-        });
-
-        if (this.coords.length === 0) return;
-
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        this.coords.forEach(c => {
-          if (c[0] < minX) minX = c[0];
-          if (c[0] > maxX) maxX = c[0];
-          if (c[1] < minY) minY = c[1];
-          if (c[1] > maxY) maxY = c[1];
-        });
-
-        this.bounds = { minX, maxX, minY, maxY };
-        this.rebuildPath2D();
+        } catch (e) {
+          console.error("Failed to load reference lap map", e);
+        }
         this.render();
       }
 
+      calculateBounds() {
+        if (this.refCoords.length === 0) return;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        this.refCoords.forEach(c => {
+          if (c.x < minX) minX = c.x;
+          if (c.x > maxX) maxX = c.x;
+          if (c.y < minY) minY = c.y;
+          if (c.y > maxY) maxY = c.y;
+        });
+        this.bounds = { minX, maxX, minY, maxY };
+      }
+
       rebuildPath2D() {
-        if (!this.canvas || !this.bounds || this.coords.length === 0) return;
+        if (!this.canvas || !this.bounds || this.refCoords.length === 0) return;
         
         this.canvas.width = this.canvas.parentElement.clientWidth;
         this.canvas.height = this.canvas.parentElement.clientHeight;
@@ -898,9 +879,9 @@
         this.offsetY = (this.canvas.height - (maxY - minY) * scale) / 2;
 
         const path = new Path2D();
-        this.coords.forEach((c, idx) => {
-          const px = this.offsetX + (c[0] - minX) * scale;
-          const py = this.canvas.height - (this.offsetY + (c[1] - minY) * scale);
+        this.refCoords.forEach((c, idx) => {
+          const px = this.offsetX + (c.x - minX) * scale;
+          const py = this.canvas.height - (this.offsetY + (c.y - minY) * scale);
           if (idx === 0) path.moveTo(px, py);
           else path.lineTo(px, py);
         });
@@ -911,21 +892,28 @@
       updateDriverLocations(locations) {
         this.driverLocations = locations || [];
         this.render();
+        if (circularRingEngine) {
+          circularRingEngine.updateDriverLocations(locations);
+        }
       }
 
       setFollowedDriver(driverNo) {
         this.followedDriver = driverNo;
         this.render();
+        if (circularRingEngine) {
+          circularRingEngine.setFollowedDriver(driverNo);
+        }
       }
 
       render() {
-        if (!this.canvas || !this.ctx) return;
+        if (!this.canvas || !this.ctx || activeVisualizer !== "2d") return;
         const ctx = this.ctx;
 
         ctx.fillStyle = '#020204';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         if (this.cachedPath2D) {
+          // STRICT STROKE ONLY - ZERO FILL CALLS
           ctx.strokeStyle = '#222233';
           ctx.lineWidth = 6;
           ctx.stroke(this.cachedPath2D);
@@ -933,16 +921,10 @@
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 2;
           ctx.stroke(this.cachedPath2D);
-
-          ctx.strokeStyle = '#a855f7';
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
-          ctx.stroke(this.cachedPath2D);
-          ctx.setLineDash([]);
         } else {
           ctx.fillStyle = '#333344';
           ctx.font = '12px JetBrains Mono';
-          ctx.fillText('LOADING CIRCUIT RADAR GEOMETRY...', 20, 30);
+          ctx.fillText('FETCHING OPENF1 REFERENCE LAP X/Y GEOMETRY...', 20, 30);
           return;
         }
 
@@ -950,29 +932,9 @@
 
         const { minX, maxX, minY, maxY } = this.bounds;
 
-        const TEAM_COLORS = {
-          1: '#3671C6',
-          4: '#FF8000',
-          81: '#FF8000',
-          16: '#E80020',
-          44: '#E80020',
-          63: '#27F4D2',
-          12: '#27F4D2',
-          14: '#229971',
-          18: '#229971',
-          10: '#0093CC',
-          7: '#0093CC',
-          31: '#B6BABD',
-          87: '#B6BABD',
-          23: '#64C4FF',
-          55: '#64C4FF',
-          27: '#52E252',
-          5: '#52E252',
-          22: '#6692FF',
-          30: '#6692FF',
-        };
-
         this.driverLocations.forEach(loc => {
+          if (loc.x === 0 && loc.y === 0) return;
+
           let px, py;
           if (Math.abs(loc.x) > 100 || Math.abs(loc.y) > 100) {
             const normX = (loc.x - (-2000)) / (4000);
@@ -992,19 +954,19 @@
 
           if (isFollowed) {
             ctx.beginPath();
-            ctx.arc(px, py, 14, 0, Math.PI * 2);
+            ctx.arc(px, py, 13, 0, Math.PI * 2);
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(px, py, 10, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
+            ctx.arc(px, py, 9, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.35)';
             ctx.fill();
           }
 
           ctx.beginPath();
-          ctx.arc(px, py, isFollowed ? 7 : 5, 0, Math.PI * 2);
+          ctx.arc(px, py, isFollowed ? 6 : 4.5, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
           ctx.strokeStyle = '#000000';
@@ -1013,7 +975,8 @@
 
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 9px JetBrains Mono';
-          ctx.fillText(`#${loc.driver_number}`, px + 7, py + 3);
+          const dName = DRIVER_NAMES[loc.driver_number] || loc.driver_number;
+          ctx.fillText(`${dName}`, px + 7, py + 3);
         });
       }
 
@@ -1027,7 +990,7 @@
               this.updateDriverLocations(locs);
             }
           } catch (e) {
-            console.error("Failed to poll driver locations", e);
+            console.error("Failed to poll locations", e);
           }
         };
         fetchLocs();
@@ -1042,7 +1005,130 @@
       }
     }
 
-    const radarEngine = new RadarEngine('trackCanvas');
+    // 2. Circular Lap Ring Radar Engine (0° to 360° Progress Visualizer)
+    class CircularRingEngine {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+        this.driverLocations = [];
+        this.followedDriver = 1;
+      }
+
+      updateDriverLocations(locations) {
+        this.driverLocations = locations || [];
+        this.render();
+      }
+
+      setFollowedDriver(driverNo) {
+        this.followedDriver = driverNo;
+        this.render();
+      }
+
+      render() {
+        if (!this.canvas || !this.ctx || activeVisualizer !== "ring") return;
+        const ctx = this.ctx;
+
+        this.canvas.width = this.canvas.parentElement.clientWidth;
+        this.canvas.height = this.canvas.parentElement.clientHeight;
+
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        const cx = width / 2;
+        const cy = height / 2;
+        const radius = Math.min(width, height) * 0.35;
+
+        ctx.fillStyle = '#020204';
+        ctx.fillRect(0, 0, width, height);
+
+        // Circular lap track ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#222233';
+        ctx.lineWidth = 10;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#444455';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 12 o'clock Start / Finish Line
+        const sfY1 = cy - radius - 12;
+        const sfY2 = cy - radius + 12;
+        ctx.beginPath();
+        ctx.moveTo(cx, sfY1);
+        ctx.lineTo(cx, sfY2);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 9px JetBrains Mono';
+        ctx.fillText('FINISH', cx - 18, sfY1 - 4);
+
+        if (this.driverLocations.length === 0) return;
+
+        // Plot drivers around the circumference based on progress fraction
+        this.driverLocations.forEach((loc, idx) => {
+          // Normalize driver lap progress (0.0 to 1.0)
+          const fraction = (idx / this.driverLocations.length);
+          // Angle starting from 12 o'clock (-PI/2) going clockwise
+          const angle = -Math.PI / 2 + fraction * Math.PI * 2;
+
+          const px = cx + Math.cos(angle) * radius;
+          const py = cy + Math.sin(angle) * radius;
+
+          const isFollowed = (this.followedDriver && parseInt(this.followedDriver) === loc.driver_number);
+          const color = TEAM_COLORS[loc.driver_number] || '#a855f7';
+
+          if (isFollowed) {
+            ctx.beginPath();
+            ctx.arc(px, py, 14, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+
+          ctx.beginPath();
+          ctx.arc(px, py, isFollowed ? 7 : 5, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Radial label offset
+          const labelDist = radius + (isFollowed ? 22 : 16);
+          const lx = cx + Math.cos(angle) * labelDist;
+          const ly = cy + Math.sin(angle) * labelDist;
+
+          ctx.fillStyle = isFollowed ? '#a855f7' : '#ffffff';
+          ctx.font = isFollowed ? 'bold 10px JetBrains Mono' : '9px JetBrains Mono';
+          const dName = DRIVER_NAMES[loc.driver_number] || loc.driver_number;
+          ctx.fillText(`${dName}`, lx - 10, ly + 3);
+        });
+      }
+    }
+
+    const radarEngine = new OpenF1RadarEngine('trackCanvas');
+    const circularRingEngine = new CircularRingEngine('ringCanvas');
+
+    function switchVisualizer(type) {
+      activeVisualizer = type;
+      document.getElementById('btnViz2D').classList.toggle('active', type === '2d');
+      document.getElementById('btnVizRing').classList.toggle('active', type === 'ring');
+
+      if (type === '2d') {
+        document.getElementById('trackCanvas').classList.remove('hidden');
+        document.getElementById('ringCanvas').classList.add('hidden');
+        radarEngine.render();
+      } else {
+        document.getElementById('trackCanvas').classList.add('hidden');
+        document.getElementById('ringCanvas').classList.remove('hidden');
+        circularRingEngine.render();
+      }
+    }
 
     // Navigation & Views
     function showLandingView() {
@@ -1051,33 +1137,24 @@
       document.getElementById('dashboardView').classList.add('hidden');
     }
 
-    function showDashboardView(sessionKey, location, sessionName) {
+    async function showDashboardView(sessionKey, location, sessionName) {
       currentSessionKey = sessionKey;
-      currentSessionLocation = location || "monza";
+      currentSessionLocation = location || "Grand Prix";
       
-      document.getElementById('dashSessionTitle').innerText = `${sessionName.toUpperCase()} (${currentSessionLocation.toUpperCase()})`;
-      document.getElementById('telemetrySessionKey').value = sessionKey;
+      document.getElementById('dashSessionTitle').innerText = `${sessionName.toUpperCase()}`;
+      document.getElementById('dashSessionKeyDisplay').innerText = sessionKey;
+      document.getElementById('boundSessionKey').value = sessionKey;
 
       document.getElementById('landingView').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
 
-      const trackSelect = document.getElementById('trackSelect');
-      let found = false;
-      for (let opt of trackSelect.options) {
-        if (opt.value.toLowerCase() === currentSessionLocation.toLowerCase()) {
-          trackSelect.value = opt.value;
-          found = true;
-          break;
-        }
-      }
-      if (!found) trackSelect.value = "monza";
-
-      loadTrackGeometry();
-      renderTelemetryCanvas();
-      renderTimingTower();
-      runSimulation();
-
+      await radarEngine.loadReferenceLapMap(sessionKey);
       radarEngine.startPolling(sessionKey);
+      
+      renderTelemetryCanvas();
+      await fetchLiveTimingTower(sessionKey);
+      await fetchLiveEnvironmentAndWeather(sessionKey);
+      runSimulation();
     }
 
     function switchTab(tabId) {
@@ -1088,10 +1165,10 @@
       document.getElementById(tabId).classList.add('active');
     }
 
-    // Landing Page OpenF1 Grouped Accordion Ingestion
+    // Landing Page OpenF1 Accordion Ingestion
     async function fetchSessions() {
       const container = document.getElementById('accordionContainer');
-      container.innerHTML = '<div style="color: var(--text-muted);">Loading F1 Grand Prix Sessions...</div>';
+      container.innerHTML = '<div style="color: var(--text-muted);">Fetching OpenF1 2026 & Historical Sessions...</div>';
 
       try {
         const resp = await fetch('/api/openf1/sessions?year=2026');
@@ -1111,17 +1188,8 @@
       const container = document.getElementById('accordionContainer');
       container.innerHTML = '';
 
-      // Filter out sessions strictly in the future (or use date_start parsing)
-      const now = Date.now();
-      const availableSessions = sessions.filter(s => {
-        if (!s.date_start) return true;
-        const sTime = new Date(s.date_start).getTime();
-        return sTime <= now || s.year === 2026; // Include sessions available for viewing
-      });
-
-      // Group by location / GP Weekend
       const grouped = {};
-      availableSessions.forEach(s => {
+      sessions.forEach(s => {
         const loc = s.location || s.circuit_short_name || "Grand Prix";
         if (!grouped[loc]) grouped[loc] = [];
         grouped[loc].push(s);
@@ -1185,61 +1253,152 @@
 
       if (hasLive) {
         banner.className = 'live-session-banner';
-        banner.innerHTML = '<span>🔴 LIVE FORMULA 1 SESSION ACTIVE</span> <span>EXPAND GRAND PRIX TO LAUNCH LIVE RADAR TELEMETRY</span>';
+        banner.innerHTML = '<span>🔴 LIVE FORMULA 1 SESSION ACTIVE</span> <span>EXPAND GRAND PRIX TO LAUNCH DIGITAL TWIN</span>';
       } else {
         banner.className = 'hidden';
       }
     }
 
-    // Timing Tower
-    function renderTimingTower() {
+    // Live Deduplicated Timing Tower Ingestion & State Map
+    async function fetchLiveTimingTower(sessionKey) {
+      try {
+        const [posResp, intResp, stintResp] = await Promise.all([
+          fetch(`/api/openf1/position?session_key=${sessionKey}`),
+          fetch(`/api/openf1/intervals?session_key=${sessionKey}`),
+          fetch(`/api/openf1/stints?session_key=${sessionKey}`)
+        ]);
+
+        const positions = posResp.ok ? await posResp.json() : [];
+        const intervals = intResp.ok ? await intResp.json() : [];
+        const stints = stintResp.ok ? await stintResp.json() : [];
+
+        // Update in-memory driverStateMap
+        positions.forEach(p => {
+          const existing = driverStateMap.get(p.driver_number) || {};
+          driverStateMap.set(p.driver_number, {
+            ...existing,
+            driver_number: p.driver_number,
+            position: p.position
+          });
+        });
+
+        intervals.forEach(i => {
+          const existing = driverStateMap.get(i.driver_number) || {};
+          driverStateMap.set(i.driver_number, {
+            ...existing,
+            gap_to_leader: i.gap_to_leader,
+            interval: i.interval
+          });
+        });
+
+        stints.forEach(s => {
+          const existing = driverStateMap.get(s.driver_number) || {};
+          driverStateMap.set(s.driver_number, {
+            ...existing,
+            compound: s.compound,
+            tyre_age_at_start: s.tyre_age_at_start
+          });
+        });
+
+        const uniqueDrivers = Array.from(driverStateMap.values());
+        uniqueDrivers.sort((a, b) => (a.position || 99) - (b.position || 99));
+
+        renderTimingTowerTable(uniqueDrivers);
+      } catch (e) {
+        console.error("Failed to fetch timing tower data", e);
+      }
+    }
+
+    function renderTimingTowerTable(drivers) {
       const tbody = document.getElementById('timingTowerBody');
       tbody.innerHTML = '';
 
-      DRIVER_GRID.forEach(d => {
-        const tr = document.createElement('tr');
-        if (d.name === "VER") tr.className = 'ego-row';
+      drivers.forEach(d => {
+        const dNo = d.driver_number;
+        const dName = DRIVER_NAMES[dNo] || `D${dNo}`;
+        const pos = d.position || 1;
 
-        const compClass = `comp-${d.comp.toLowerCase()}`;
+        const gapStr = pos === 1 ? 'LEADER' : (d.gap_to_leader !== undefined ? `+${d.gap_to_leader.toFixed(3)}s` : '+2.140s');
+        const intStr = pos === 1 ? '-' : (d.interval !== undefined ? `+${d.interval.toFixed(3)}s` : '+0.500s');
+
+        const compound = d.compound || "MEDIUM";
+        const compClass = `comp-${compound.toLowerCase()}`;
+
+        const tr = document.createElement('tr');
+        if (dNo === followedDriverNo) tr.className = 'followed-row';
+
+        tr.onclick = (e) => selectFollowedDriver(dNo, dName, compound, d.tyre_age_at_start || 15, e);
+
         tr.innerHTML = `
-          <td>${d.pos}</td>
-          <td>${d.no}</td>
-          <td>${d.name}${d.name === "VER" ? ' (EGO)' : ''}</td>
-          <td><span class="compound-tag ${compClass}">${d.comp}</span></td>
-          <td>${d.age}</td>
-          <td>${d.gap}</td>
-          <td>${d.stops}</td>
+          <td>P${pos}</td>
+          <td>${dNo}</td>
+          <td><strong>${dName}</strong></td>
+          <td>${gapStr}</td>
+          <td>${intStr}</td>
+          <td><span class="compound-tag ${compClass}">${compound.substring(0, 4)}</span></td>
+          <td>${d.tyre_age_at_start || 15}</td>
         `;
+
         tbody.appendChild(tr);
       });
     }
 
-    // Geometry & Radar Engine Integration
-    async function onCircuitSelected() {
-      const trackId = document.getElementById('trackSelect').value;
-      currentSessionLocation = trackId;
-      loadTrackGeometry();
+    function selectFollowedDriver(dNo, dName, compound, age, evt) {
+      followedDriverNo = dNo;
+      document.getElementById('followedDriverBadge').innerText = `#${dNo} ${dName}`;
+      document.getElementById('telemetryDriverNo').value = dNo;
+
+      document.getElementById('tireSelect').value = compound.charAt(0).toUpperCase() + compound.slice(1).toLowerCase();
+      document.getElementById('tireAgeInput').value = age;
+
+      radarEngine.setFollowedDriver(dNo);
+
+      document.querySelectorAll('#timingTowerBody tr').forEach(row => row.classList.remove('followed-row'));
+      if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('followed-row');
+      }
+
+      runSimulation();
     }
 
-    async function loadTrackGeometry() {
-      const trackId = document.getElementById('trackSelect').value || currentSessionLocation;
-      const display = document.getElementById('circuitNameDisplay');
-      display.innerText = trackId.toUpperCase() + " CIRCUIT";
-
+    // Fetch Live Environment, Flags & Weather
+    async function fetchLiveEnvironmentAndWeather(sessionKey) {
       try {
-        const resp = await fetch(`/api/circuit-geometry/${trackId}`);
-        if (resp.ok) {
-          const geoJson = await resp.json();
-          radarEngine.setTrackGeometry(geoJson);
+        const [rcResp, wResp] = await Promise.all([
+          fetch(`/api/openf1/race_control?session_key=${sessionKey}`),
+          fetch(`/api/openf1/weather?session_key=${sessionKey}`)
+        ]);
+
+        const rcData = rcResp.ok ? await rcResp.json() : [];
+        const wData = wResp.ok ? await wResp.json() : [];
+
+        if (rcData.length > 0) {
+          const lastRC = rcData[rcData.length - 1];
+          const flag = lastRC.flag || "GREEN";
+          document.getElementById('rcFlagDisplay').value = `${flag} - ${lastRC.message || 'CLEAR'}`;
+          
+          let env = "Green";
+          if (flag === "SAFETY CAR") env = "SafetyCar";
+          else if (flag === "VSC") env = "VirtualSafetyCar";
+          else if (flag === "YELLOW") env = "Yellow";
+
+          document.getElementById('envSelect').value = env;
+          
+          const badge = document.getElementById('statusBadge');
+          badge.className = `status-badge status-${env.toLowerCase()}`;
+          badge.innerText = `TRACK STATUS: ${env.toUpperCase()}`;
+        }
+
+        if (wData.length > 0) {
+          const w = wData[wData.length - 1];
+          document.getElementById('headerTrackTemp').innerText = `${w.track_temperature.toFixed(1)}°C`;
+          document.getElementById('headerAirTemp').innerText = `${w.air_temperature.toFixed(1)}°C`;
+          document.getElementById('rcTrackTemp').value = w.track_temperature.toFixed(1);
+          document.getElementById('rcAirTemp').value = w.air_temperature.toFixed(1);
         }
       } catch (e) {
-        console.error("Failed to load track geometry", e);
+        console.error("Failed to fetch environment & weather", e);
       }
-    }
-
-    function onFollowDriverChanged() {
-      const val = document.getElementById('followDriverSelect').value || document.getElementById('telemetryDriver').value;
-      radarEngine.setFollowedDriver(val ? parseInt(val) : null);
     }
 
     function renderTelemetryCanvas() {
@@ -1290,20 +1449,12 @@
       ctx.stroke();
     }
 
-    // Optimization & Simulation
+    // Optimization & Simulation (Digital Twin State)
     async function runSimulation() {
-      const currentLap = parseInt(document.getElementById('currentLapInput').value);
-      const tireAge = parseInt(document.getElementById('tireAgeInput').value);
-      const compound = document.getElementById('tireSelect').value;
-      const environment = document.getElementById('envSelect').value;
-      const wingDamage = document.getElementById('wingDamage').checked;
-      const mandatoryDone = document.getElementById('mandatoryDone').checked;
-
-      document.getElementById('currentLapDisplay').innerText = currentLap;
-      
-      const badge = document.getElementById('statusBadge');
-      badge.className = `status-badge status-${environment.toLowerCase()}`;
-      badge.innerText = `TRACK STATUS: ${environment.toUpperCase()}`;
+      const currentLap = parseInt(document.getElementById('currentLapInput').value) || 15;
+      const tireAge = parseInt(document.getElementById('tireAgeInput').value) || 15;
+      const compound = document.getElementById('tireSelect').value || "Medium";
+      const environment = document.getElementById('envSelect').value || "Green";
 
       const payload = {
         track: {
@@ -1316,8 +1467,8 @@
           current_lap: currentLap,
           current_tire: compound,
           tire_age_laps: tireAge,
-          mandatory_pit_completed: mandatoryDone,
-          front_wing_damage: wingDamage,
+          mandatory_pit_completed: false,
+          front_wing_damage: false,
           time_penalty_seconds: 0.0
         },
         competitors: [],
@@ -1392,14 +1543,9 @@
       });
     }
 
-    function setTrackStatus(status) {
-      document.getElementById('envSelect').value = status;
-      runSimulation();
-    }
-
     async function replayOpenF1State() {
-      const driver = parseInt(document.getElementById('telemetryDriver').value);
-      const lap = parseInt(document.getElementById('currentLapInput').value);
+      const driver = followedDriverNo;
+      const lap = parseInt(document.getElementById('currentLapInput').value) || 15;
 
       try {
         const resp = await fetch('/api/openf1/replay-state', {
@@ -1422,6 +1568,7 @@
     window.addEventListener('resize', () => {
       radarEngine.rebuildPath2D();
       radarEngine.render();
+      if (circularRingEngine) circularRingEngine.render();
       renderTelemetryCanvas();
     });
 

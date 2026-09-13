@@ -1,6 +1,6 @@
 //! HTTP Request handlers for the F1 Strategy Engine endpoints.
 
-use axum::{extract::Query, response::Html, Json};
+use axum::{Json, extract::Query, response::Html};
 use serde::Deserialize;
 use utoipa::IntoParams;
 
@@ -153,4 +153,3 @@ pub async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategy
     let response = optimize_race_strategies(&payload);
     Json(response)
 }
-

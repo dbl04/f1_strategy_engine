@@ -46,11 +46,9 @@ pub async fn fetch_circuit_geometry(name: &str) -> Result<Value, AppError> {
         .await
         .map_err(|e| AppError::OverpassError(format!("Overpass API request failed: {}", e)))?;
 
-    let json = resp
-        .json::<Value>()
-        .await
-        .map_err(|e| AppError::OverpassError(format!("Failed to parse Overpass response: {}", e)))?;
+    let json = resp.json::<Value>().await.map_err(|e| {
+        AppError::OverpassError(format!("Failed to parse Overpass response: {}", e))
+    })?;
 
     Ok(json)
 }
-
