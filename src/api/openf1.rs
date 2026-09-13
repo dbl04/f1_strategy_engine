@@ -64,6 +64,35 @@ pub struct OpenF1Session {
     pub year: Option<u32>,
     #[serde(default)]
     pub is_live: Option<bool>,
+    #[serde(default)]
+    pub is_cancelled: Option<bool>,
+}
+
+/// OpenF1 Driver metadata model.
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct OpenF1Driver {
+    pub session_key: u64,
+    #[serde(default)]
+    pub meeting_key: Option<u64>,
+    pub driver_number: u32,
+    #[serde(default)]
+    pub broadcast_name: Option<String>,
+    #[serde(default)]
+    pub full_name: Option<String>,
+    #[serde(default)]
+    pub name_acronym: Option<String>,
+    #[serde(default)]
+    pub team_name: Option<String>,
+    #[serde(default)]
+    pub team_colour: Option<String>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub last_name: Option<String>,
+    #[serde(default)]
+    pub headshot_url: Option<String>,
+    #[serde(default)]
+    pub country_code: Option<String>,
 }
 
 /// OpenF1 Lap telemetry record model.
@@ -213,7 +242,7 @@ impl OpenF1Client {
     }
 
     pub async fn get_sessions(&self, year: u32) -> Result<Vec<OpenF1Session>, AppError> {
-        let url = format!("https://api.openf1.org/v1/sessions?year={}", year);
+        let url = format!("https://api.openf1.org/v1/sessions?year={}&session_name=Race", year);
         let resp = reqwest::get(&url).await;
 
         let mut sessions: Vec<OpenF1Session> = match resp {
@@ -229,6 +258,17 @@ impl OpenF1Client {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
+
+        // Filter out cancelled races and races starting in the future (> current datetime)
+        sessions.retain(|s| {
+            if s.is_cancelled == Some(true) {
+                return false;
+            }
+            if let Some(start_secs) = s.date_start.as_deref().and_then(parse_iso_to_epoch) {
+                return start_secs <= now_secs;
+            }
+            true
+        });
 
         sessions.sort_by(|a, b| {
             let d_a = a.date_start.as_deref().unwrap_or("");
@@ -248,6 +288,19 @@ impl OpenF1Client {
         }
 
         Ok(sessions)
+    }
+
+    pub async fn get_drivers(&self, session_key: u64) -> Result<Vec<OpenF1Driver>, AppError> {
+        let url = format!("https://api.openf1.org/v1/drivers?session_key={}", session_key);
+        let resp = reqwest::get(&url).await;
+        let drivers = match resp {
+            Ok(res) => res.json::<Vec<OpenF1Driver>>().await.unwrap_or_default(),
+            Err(_) => vec![],
+        };
+        if drivers.is_empty() {
+            return Ok(generate_2026_fallback_drivers(session_key));
+        }
+        Ok(drivers)
     }
 
     pub async fn get_laps(
@@ -415,7 +468,7 @@ impl OpenF1Client {
         let mut raw_locations: Vec<OpenF1Location> = Vec::new();
 
         // Attempt to fetch a reference lap from OpenF1
-        for d_no in [63, 1, 4, 16] {
+        for d_no in [1, 3, 4, 16, 44, 63, 81, 55, 10, 14] {
             let laps = self.get_laps(session_key, d_no).await.unwrap_or_default();
             let found_lap = laps.iter().find(|l| {
                 l.date_start.is_some() && l.lap_duration.map(|d| d > 40.0).unwrap_or(false)
@@ -427,12 +480,18 @@ impl OpenF1Client {
                 continue;
             };
 
-            let end_str = match valid_lap.lap_duration {
+            let clean_start = if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(start) {
+                parsed.format("%Y-%m-%dT%H:%M:%S").to_string()
+            } else {
+                start.chars().take(19).collect()
+            };
+
+            let clean_end = match valid_lap.lap_duration {
                 Some(dur) => {
                     if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(start) {
                         let end_time =
                             parsed + chrono::Duration::milliseconds((dur * 1000.0) as i64);
-                        Some(end_time.to_rfc3339())
+                        Some(end_time.format("%Y-%m-%dT%H:%M:%S").to_string())
                     } else {
                         None
                     }
@@ -442,9 +501,9 @@ impl OpenF1Client {
 
             let mut url = format!(
                 "https://api.openf1.org/v1/location?session_key={}&driver_number={}&date>={}",
-                session_key, d_no, start
+                session_key, d_no, clean_start
             );
-            if let Some(ref end) = end_str {
+            if let Some(ref end) = clean_end {
                 url.push_str(&format!("&date<={}", end));
             }
             if let Ok(resp) = reqwest::get(&url).await {
@@ -532,38 +591,23 @@ impl OpenF1Client {
             (0.0, 0.0, 1.0)
         };
 
-        let valid_drivers = [
-            (1, "VER", "Red Bull"),
-            (4, "NOR", "McLaren"),
-            (81, "PIA", "McLaren"),
-            (16, "LEC", "Ferrari"),
-            (44, "HAM", "Ferrari"),
-            (63, "RUS", "Mercedes"),
-            (12, "ANT", "Mercedes"),
-            (14, "ALO", "Aston Martin"),
-            (18, "STR", "Aston Martin"),
-            (10, "GAS", "Alpine"),
-            (7, "DOO", "Alpine"),
-            (31, "OCO", "Haas"),
-            (87, "BEA", "Haas"),
-            (23, "ALB", "Williams"),
-            (55, "SAI", "Williams"),
-            (27, "HUL", "Sauber"),
-            (5, "BOR", "Sauber"),
-            (22, "TSU", "VCARB"),
-            (30, "LAW", "VCARB"),
-            (3, "RIC", "Reserve"),
-            (77, "BOT", "Reserve"),
-            (24, "ZHO", "Reserve"),
-        ];
-
+        let drivers_meta = self.get_drivers(session_key).await.unwrap_or_default();
         let mut drivers = Vec::new();
-        for (d_no, tla, team) in valid_drivers {
+        for (idx, d_meta) in drivers_meta.into_iter().enumerate() {
+            let d_no = d_meta.driver_number;
+            let tla = d_meta.name_acronym.clone().unwrap_or_else(|| {
+                d_meta.broadcast_name
+                    .as_deref()
+                    .map(|b| b.chars().filter(|c| c.is_alphabetic()).take(3).collect::<String>().to_uppercase())
+                    .unwrap_or_else(|| format!("{}", d_no))
+            });
+            let team = d_meta.team_name.clone().unwrap_or_else(|| "Formula 1".to_string());
+
             let pos = positions
                 .iter()
                 .find(|p| p.driver_number == d_no)
                 .map(|p| p.position)
-                .unwrap_or(99);
+                .unwrap_or((idx + 1) as u32);
             let interval_obj = intervals.iter().find(|i| i.driver_number == d_no);
             let stint_obj = stints.iter().find(|s| s.driver_number == d_no);
             let loc_obj = locations.iter().find(|l| l.driver_number == d_no);
@@ -574,7 +618,7 @@ impl OpenF1Client {
                 interval_obj
                     .and_then(|i| i.gap_to_leader)
                     .map(|g| format!("+{:.3}s", g))
-                    .unwrap_or_else(|| "+2.140s".to_string())
+                    .unwrap_or_else(|| format!("+{:.3}s", (pos.saturating_sub(1) as f64) * 1.5))
             };
 
             let interval = if pos == 1 {
@@ -597,12 +641,12 @@ impl OpenF1Client {
             let compound = stint_obj
                 .map(|s| s.compound.clone())
                 .unwrap_or_else(|| "MEDIUM".to_string());
-            let tyre_age = stint_obj.map(|s| s.tyre_age_at_start).unwrap_or(12);
+            let tyre_age = stint_obj.map(|s| s.tyre_age_at_start).unwrap_or(0);
 
             drivers.push(LiveDriverState {
                 driver_number: d_no,
-                tla: tla.to_string(),
-                team: team.to_string(),
+                tla,
+                team,
                 position: pos,
                 gap,
                 interval,
@@ -633,6 +677,9 @@ impl OpenF1Client {
 
 /// Helper function parsing ISO 8601 timestamp string into epoch seconds
 fn parse_iso_to_epoch(iso: &str) -> Option<u64> {
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(iso) {
+        return Some(dt.timestamp().max(0) as u64);
+    }
     if iso.len() < 19 {
         return None;
     }
@@ -643,8 +690,52 @@ fn parse_iso_to_epoch(iso: &str) -> Option<u64> {
     let min: u64 = iso[14..16].parse().ok()?;
     let sec: u64 = iso[17..19].parse().ok()?;
 
-    let days_since_epoch = (year - 1970) * 365 + (year - 1969) / 4 + (month - 1) * 30 + (day - 1);
+    let days_since_epoch = (year.saturating_sub(1970)) * 365 + (year.saturating_sub(1969)) / 4 + (month.saturating_sub(1)) * 30 + (day.saturating_sub(1));
     Some(days_since_epoch * 86400 + hour * 3600 + min * 60 + sec)
+}
+
+pub fn generate_2026_fallback_drivers(session_key: u64) -> Vec<OpenF1Driver> {
+    let list = [
+        (1, "L NORRIS", "Lando NORRIS", "NOR", "McLaren", "F47600"),
+        (3, "M VERSTAPPEN", "Max VERSTAPPEN", "VER", "Red Bull Racing", "4781D7"),
+        (5, "G BORTOLETO", "Gabriel BORTOLETO", "BOR", "Audi", "F50537"),
+        (6, "I HADJAR", "Isack HADJAR", "HAD", "Red Bull Racing", "4781D7"),
+        (10, "P GASLY", "Pierre GASLY", "GAS", "Alpine", "00A1E8"),
+        (11, "S PEREZ", "Sergio PEREZ", "PER", "Cadillac", "909090"),
+        (12, "K ANTONELLI", "Kimi ANTONELLI", "ANT", "Mercedes", "00D7B6"),
+        (14, "F ALONSO", "Fernando ALONSO", "ALO", "Aston Martin", "229971"),
+        (16, "C LECLERC", "Charles LECLERC", "LEC", "Ferrari", "ED1131"),
+        (18, "L STROLL", "Lance STROLL", "STR", "Aston Martin", "229971"),
+        (23, "A ALBON", "Alexander ALBON", "ALB", "Williams", "1868DB"),
+        (27, "N HULKENBERG", "Nico HULKENBERG", "HUL", "Audi", "F50537"),
+        (30, "L LAWSON", "Liam LAWSON", "LAW", "Racing Bulls", "6C98FF"),
+        (31, "E OCON", "Esteban OCON", "OCO", "Haas F1 Team", "9C9FA2"),
+        (41, "A LINDBLAD", "Arvid LINDBLAD", "LIN", "Racing Bulls", "6C98FF"),
+        (43, "F COLAPINTO", "Franco COLAPINTO", "COL", "Alpine", "00A1E8"),
+        (44, "L HAMILTON", "Lewis HAMILTON", "HAM", "Ferrari", "ED1131"),
+        (55, "C SAINZ", "Carlos SAINZ", "SAI", "Williams", "1868DB"),
+        (63, "G RUSSELL", "George RUSSELL", "RUS", "Mercedes", "00D7B6"),
+        (77, "V BOTTAS", "Valtteri BOTTAS", "BOT", "Cadillac", "909090"),
+        (81, "O PIASTRI", "Oscar PIASTRI", "PIA", "McLaren", "F47600"),
+        (87, "O BEARMAN", "Oliver BEARMAN", "BEA", "Haas F1 Team", "9C9FA2"),
+    ];
+
+    list.iter()
+        .map(|(no, bname, fname, tla, team, col)| OpenF1Driver {
+            session_key,
+            meeting_key: None,
+            driver_number: *no,
+            broadcast_name: Some(bname.to_string()),
+            full_name: Some(fname.to_string()),
+            name_acronym: Some(tla.to_string()),
+            team_name: Some(team.to_string()),
+            team_colour: Some(col.to_string()),
+            first_name: None,
+            last_name: None,
+            headshot_url: None,
+            country_code: None,
+        })
+        .collect()
 }
 
 fn generate_fallback_laps(_session_key: u64) -> Vec<OpenF1Lap> {
@@ -670,7 +761,7 @@ fn generate_fallback_laps(_session_key: u64) -> Vec<OpenF1Lap> {
 
 fn generate_fallback_positions(session_key: u64) -> Vec<OpenF1Position> {
     let drivers = [
-        1, 4, 16, 81, 63, 44, 14, 18, 10, 31, 23, 55, 27, 30, 22, 87, 12, 7, 5, 3, 77, 24,
+        1, 3, 5, 6, 10, 11, 12, 14, 16, 18, 23, 27, 30, 31, 41, 43, 44, 55, 63, 77, 81, 87,
     ];
     drivers
         .iter()
@@ -686,7 +777,7 @@ fn generate_fallback_positions(session_key: u64) -> Vec<OpenF1Position> {
 
 fn generate_fallback_intervals(session_key: u64) -> Vec<OpenF1Interval> {
     let drivers = [
-        1, 4, 16, 81, 63, 44, 14, 18, 10, 31, 23, 55, 27, 30, 22, 87, 12, 7, 5, 3, 77, 24,
+        1, 3, 5, 6, 10, 11, 12, 14, 16, 18, 23, 27, 30, 31, 41, 43, 44, 55, 63, 77, 81, 87,
     ];
     drivers
         .iter()
@@ -703,7 +794,7 @@ fn generate_fallback_intervals(session_key: u64) -> Vec<OpenF1Interval> {
 
 fn generate_fallback_stints(session_key: u64) -> Vec<OpenF1Stint> {
     let drivers = [
-        1, 4, 16, 81, 63, 44, 14, 18, 10, 31, 23, 55, 27, 30, 22, 87, 12, 7, 5, 3, 77, 24,
+        1, 3, 5, 6, 10, 11, 12, 14, 16, 18, 23, 27, 30, 31, 41, 43, 44, 55, 63, 77, 81, 87,
     ];
     drivers
         .iter()
@@ -725,7 +816,7 @@ fn generate_fallback_stints(session_key: u64) -> Vec<OpenF1Stint> {
 
 fn generate_fallback_driver_locations(session_key: u64) -> Vec<OpenF1Location> {
     let drivers = [
-        1, 4, 16, 81, 63, 44, 14, 18, 10, 31, 23, 55, 27, 30, 22, 87, 12, 7, 5, 3, 77, 24,
+        1, 3, 5, 6, 10, 11, 12, 14, 16, 18, 23, 27, 30, 31, 41, 43, 44, 55, 63, 77, 81, 87,
     ];
     let now_millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -950,6 +1041,7 @@ fn generate_2026_fallback_sessions() -> Vec<OpenF1Session> {
                 country_name: Some(loc.to_string()),
                 year: Some(2026),
                 is_live: Some(false),
+                is_cancelled: Some(false),
             });
         }
     }
@@ -973,6 +1065,23 @@ pub async fn get_openf1_sessions(
     let year = params.year.unwrap_or(2026);
     let sessions = client.get_sessions(year).await?;
     Ok(Json(sessions))
+}
+
+/// Handler serving `GET /api/openf1/drivers?session_key=...`.
+#[utoipa::path(
+    get,
+    path = "/api/openf1/drivers",
+    params(SessionOnlyQueryParams),
+    responses(
+        (status = 200, description = "List of driver participants in session from OpenF1 API", body = Vec<OpenF1Driver>)
+    )
+)]
+pub async fn get_openf1_drivers(
+    Query(params): Query<SessionOnlyQueryParams>,
+) -> Result<Json<Vec<OpenF1Driver>>, AppError> {
+    let client = OpenF1Client::new();
+    let drivers = client.get_drivers(params.session_key).await?;
+    Ok(Json(drivers))
 }
 
 /// Handler serving `GET /api/openf1/laps/:session_key/:driver_number`.

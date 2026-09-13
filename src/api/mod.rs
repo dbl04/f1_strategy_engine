@@ -24,6 +24,7 @@ use crate::domain::{
         handlers::get_circuit_geometry,
         tracks::get_circuit_geometry_by_id,
         openf1::get_openf1_sessions,
+        openf1::get_openf1_drivers,
         openf1::get_openf1_laps,
         openf1::get_openf1_session_laps,
         openf1::get_openf1_locations,
@@ -53,6 +54,7 @@ use crate::domain::{
         WeatherState,
         WeatherForecast,
         openf1::OpenF1Session,
+        openf1::OpenF1Driver,
         openf1::OpenF1Lap,
         openf1::OpenF1CarData,
         openf1::OpenF1Location,
@@ -84,6 +86,7 @@ pub fn create_router() -> Router {
         )
         .route("/api/track/{session_key}", get(openf1::get_baked_track))
         .route("/api/openf1/sessions", get(openf1::get_openf1_sessions))
+        .route("/api/openf1/drivers", get(openf1::get_openf1_drivers))
         .route(
             "/api/openf1/laps/{session_key}/{driver_number}",
             get(openf1::get_openf1_laps),
