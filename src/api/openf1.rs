@@ -417,38 +417,41 @@ impl OpenF1Client {
         // Attempt to fetch a reference lap from OpenF1
         for d_no in [63, 1, 4, 16] {
             let laps = self.get_laps(session_key, d_no).await.unwrap_or_default();
-            if let Some(valid_lap) = laps.iter().find(|l| {
+            let found_lap = laps.iter().find(|l| {
                 l.date_start.is_some() && l.lap_duration.map(|d| d > 40.0).unwrap_or(false)
-            }) {
-                if let Some(ref start) = valid_lap.date_start {
-                    let end_str = match valid_lap.lap_duration {
-                        Some(dur) => {
-                            if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(start) {
-                                let end_time = parsed
-                                    + chrono::Duration::milliseconds((dur * 1000.0) as i64);
-                                Some(end_time.to_rfc3339())
-                            } else {
-                                None
-                            }
-                        }
-                        None => None,
-                    };
+            });
+            let Some(valid_lap) = found_lap else {
+                continue;
+            };
+            let Some(ref start) = valid_lap.date_start else {
+                continue;
+            };
 
-                    let mut url = format!(
-                        "https://api.openf1.org/v1/location?session_key={}&driver_number={}&date>={}",
-                        session_key, d_no, start
-                    );
-                    if let Some(ref end) = end_str {
-                        url.push_str(&format!("&date<={}", end));
+            let end_str = match valid_lap.lap_duration {
+                Some(dur) => {
+                    if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(start) {
+                        let end_time =
+                            parsed + chrono::Duration::milliseconds((dur * 1000.0) as i64);
+                        Some(end_time.to_rfc3339())
+                    } else {
+                        None
                     }
-                    if let Ok(resp) = reqwest::get(&url).await {
-                        if let Ok(locs) = resp.json::<Vec<OpenF1Location>>().await {
-                            if locs.len() > 50 {
-                                raw_locations = locs;
-                                break;
-                            }
-                        }
-                    }
+                }
+                None => None,
+            };
+
+            let mut url = format!(
+                "https://api.openf1.org/v1/location?session_key={}&driver_number={}&date>={}",
+                session_key, d_no, start
+            );
+            if let Some(ref end) = end_str {
+                url.push_str(&format!("&date<={}", end));
+            }
+            if let Ok(resp) = reqwest::get(&url).await {
+                let locs = resp.json::<Vec<OpenF1Location>>().await.unwrap_or_default();
+                if locs.len() > 50 {
+                    raw_locations = locs;
+                    break;
                 }
             }
         }
