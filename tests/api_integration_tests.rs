@@ -120,4 +120,3 @@ async fn test_baked_track_endpoint() {
         .unwrap();
     assert!(!body.is_empty());
 }
-

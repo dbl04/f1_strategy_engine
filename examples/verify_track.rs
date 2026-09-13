@@ -29,7 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let driver_number = 63;
     let lap_number = 8;
 
-    println!("Fetching lap window for session {}, driver {}, lap {}...", session_key, driver_number, lap_number);
+    println!(
+        "Fetching lap window for session {}, driver {}, lap {}...",
+        session_key, driver_number, lap_number
+    );
 
     let client = reqwest::blocking::Client::new();
     let lap_url = format!(
@@ -53,7 +56,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             let next_lap_url = format!(
                 "https://api.openf1.org/v1/laps?session_key={}&driver_number={}&lap_number={}",
-                session_key, driver_number, lap_number + 1
+                session_key,
+                driver_number,
+                lap_number + 1
             );
             let next_laps: Vec<Lap> = client.get(&next_lap_url).send()?.json()?;
             if !next_laps.is_empty() && next_laps[0].date_start.is_some() {
@@ -98,10 +103,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("No clean points available after filtering zero coordinates".into());
     }
 
-    let min_x = clean_points.iter().map(|pt| pt.x).fold(f64::INFINITY, f64::min);
-    let max_x = clean_points.iter().map(|pt| pt.x).fold(f64::NEG_INFINITY, f64::max);
-    let min_y = clean_points.iter().map(|pt| pt.y).fold(f64::INFINITY, f64::min);
-    let max_y = clean_points.iter().map(|pt| pt.y).fold(f64::NEG_INFINITY, f64::max);
+    let min_x = clean_points
+        .iter()
+        .map(|pt| pt.x)
+        .fold(f64::INFINITY, f64::min);
+    let max_x = clean_points
+        .iter()
+        .map(|pt| pt.x)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_y = clean_points
+        .iter()
+        .map(|pt| pt.y)
+        .fold(f64::INFINITY, f64::min);
+    let max_y = clean_points
+        .iter()
+        .map(|pt| pt.y)
+        .fold(f64::NEG_INFINITY, f64::max);
 
     let width = max_x - min_x;
     let height = max_y - min_y;
@@ -112,8 +129,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let normalized_points: Vec<NormalizedPoint> = clean_points
         .iter()
         .map(|pt| NormalizedPoint {
-            x: if max_dim != 0.0 { (pt.x - min_x) / max_dim } else { 0.0 },
-            y: if max_dim != 0.0 { (pt.y - min_y) / max_dim } else { 0.0 },
+            x: if max_dim != 0.0 {
+                (pt.x - min_x) / max_dim
+            } else {
+                0.0
+            },
+            y: if max_dim != 0.0 {
+                (pt.y - min_y) / max_dim
+            } else {
+                0.0
+            },
         })
         .collect();
 
@@ -129,7 +154,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let draw_size = svg_width - 2.0 * padding;
 
     let norm_w = if max_dim != 0.0 { width / max_dim } else { 1.0 };
-    let norm_h = if max_dim != 0.0 { height / max_dim } else { 1.0 };
+    let norm_h = if max_dim != 0.0 {
+        height / max_dim
+    } else {
+        1.0
+    };
 
     let offset_x = padding + (draw_size - norm_w * draw_size) / 2.0;
     let offset_y = padding + (draw_size - norm_h * draw_size) / 2.0;
@@ -162,9 +191,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n================ Track Validation Spike Summary ================");
     println!("Total raw points fetched: {}", total_raw_points);
     println!("Total clean points used:  {}", total_clean_points);
-    println!("Bounding Box X:           min = {:.2}, max = {:.2}", min_x, max_x);
-    println!("Bounding Box Y:           min = {:.2}, max = {:.2}", min_y, max_y);
-    println!("Circuit Aspect Ratio:     {:.4} (width / height)", aspect_ratio);
+    println!(
+        "Bounding Box X:           min = {:.2}, max = {:.2}",
+        min_x, max_x
+    );
+    println!(
+        "Bounding Box Y:           min = {:.2}, max = {:.2}",
+        min_y, max_y
+    );
+    println!(
+        "Circuit Aspect Ratio:     {:.4} (width / height)",
+        aspect_ratio
+    );
     println!("=================================================================\n");
 
     Ok(())

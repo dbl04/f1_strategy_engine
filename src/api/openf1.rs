@@ -160,7 +160,6 @@ pub struct DriverGpsSample {
     pub y: f64,
 }
 
-
 /// OpenF1 Position model.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 pub struct OpenF1Position {
@@ -264,7 +263,10 @@ impl OpenF1Client {
     }
 
     pub async fn get_sessions(&self, year: u32) -> Result<Vec<OpenF1Session>, AppError> {
-        let url = format!("https://api.openf1.org/v1/sessions?year={}&session_name=Race", year);
+        let url = format!(
+            "https://api.openf1.org/v1/sessions?year={}&session_name=Race",
+            year
+        );
         let resp = reqwest::get(&url).await;
 
         let mut sessions: Vec<OpenF1Session> = match resp {
@@ -313,7 +315,10 @@ impl OpenF1Client {
     }
 
     pub async fn get_drivers(&self, session_key: u64) -> Result<Vec<OpenF1Driver>, AppError> {
-        let url = format!("https://api.openf1.org/v1/drivers?session_key={}", session_key);
+        let url = format!(
+            "https://api.openf1.org/v1/drivers?session_key={}",
+            session_key
+        );
         let resp = reqwest::get(&url).await;
         let drivers = match resp {
             Ok(res) => res.json::<Vec<OpenF1Driver>>().await.unwrap_or_default(),
@@ -547,9 +552,15 @@ impl OpenF1Client {
         }
 
         let min_x = clean_locs.iter().map(|l| l.x).fold(f64::INFINITY, f64::min);
-        let max_x = clean_locs.iter().map(|l| l.x).fold(f64::NEG_INFINITY, f64::max);
+        let max_x = clean_locs
+            .iter()
+            .map(|l| l.x)
+            .fold(f64::NEG_INFINITY, f64::max);
         let min_y = clean_locs.iter().map(|l| l.y).fold(f64::INFINITY, f64::min);
-        let max_y = clean_locs.iter().map(|l| l.y).fold(f64::NEG_INFINITY, f64::max);
+        let max_y = clean_locs
+            .iter()
+            .map(|l| l.y)
+            .fold(f64::NEG_INFINITY, f64::max);
 
         let width = max_x - min_x;
         let height = max_y - min_y;
@@ -592,9 +603,15 @@ impl OpenF1Client {
 
         // Find bounding box for normalization
         let min_x = locations.iter().map(|l| l.x).fold(f64::INFINITY, f64::min);
-        let max_x = locations.iter().map(|l| l.x).fold(f64::NEG_INFINITY, f64::max);
+        let max_x = locations
+            .iter()
+            .map(|l| l.x)
+            .fold(f64::NEG_INFINITY, f64::max);
         let min_y = locations.iter().map(|l| l.y).fold(f64::INFINITY, f64::min);
-        let max_y = locations.iter().map(|l| l.y).fold(f64::NEG_INFINITY, f64::max);
+        let max_y = locations
+            .iter()
+            .map(|l| l.y)
+            .fold(f64::NEG_INFINITY, f64::max);
 
         let width = max_x - min_x;
         let height = max_y - min_y;
@@ -678,9 +695,15 @@ impl OpenF1Client {
             (0.0, 0.0, 1.0)
         } else if !clean_locs.is_empty() {
             let min_x = clean_locs.iter().map(|l| l.x).fold(f64::INFINITY, f64::min);
-            let max_x = clean_locs.iter().map(|l| l.x).fold(f64::NEG_INFINITY, f64::max);
+            let max_x = clean_locs
+                .iter()
+                .map(|l| l.x)
+                .fold(f64::NEG_INFINITY, f64::max);
             let min_y = clean_locs.iter().map(|l| l.y).fold(f64::INFINITY, f64::min);
-            let max_y = clean_locs.iter().map(|l| l.y).fold(f64::NEG_INFINITY, f64::max);
+            let max_y = clean_locs
+                .iter()
+                .map(|l| l.y)
+                .fold(f64::NEG_INFINITY, f64::max);
             let w = max_x - min_x;
             let h = max_y - min_y;
             let s = w.max(h);
@@ -694,12 +717,22 @@ impl OpenF1Client {
         for (idx, d_meta) in drivers_meta.into_iter().enumerate() {
             let d_no = d_meta.driver_number;
             let tla = d_meta.name_acronym.clone().unwrap_or_else(|| {
-                d_meta.broadcast_name
+                d_meta
+                    .broadcast_name
                     .as_deref()
-                    .map(|b| b.chars().filter(|c| c.is_alphabetic()).take(3).collect::<String>().to_uppercase())
+                    .map(|b| {
+                        b.chars()
+                            .filter(|c| c.is_alphabetic())
+                            .take(3)
+                            .collect::<String>()
+                            .to_uppercase()
+                    })
                     .unwrap_or_else(|| format!("{}", d_no))
             });
-            let team = d_meta.team_name.clone().unwrap_or_else(|| "Formula 1".to_string());
+            let team = d_meta
+                .team_name
+                .clone()
+                .unwrap_or_else(|| "Formula 1".to_string());
 
             let pos = positions
                 .iter()
@@ -729,10 +762,9 @@ impl OpenF1Client {
             };
 
             let (x, y) = match loc_obj {
-                Some(l) if !(l.x == 0.0 && l.y == 0.0) => (
-                    (l.x - min_x) / scale,
-                    (l.y - min_y) / scale,
-                ),
+                Some(l) if !(l.x == 0.0 && l.y == 0.0) => {
+                    ((l.x - min_x) / scale, (l.y - min_y) / scale)
+                }
                 _ => (0.0, 0.0),
             };
 
@@ -788,34 +820,156 @@ fn parse_iso_to_epoch(iso: &str) -> Option<u64> {
     let min: u64 = iso[14..16].parse().ok()?;
     let sec: u64 = iso[17..19].parse().ok()?;
 
-    let days_since_epoch = (year.saturating_sub(1970)) * 365 + (year.saturating_sub(1969)) / 4 + (month.saturating_sub(1)) * 30 + (day.saturating_sub(1));
+    let days_since_epoch = (year.saturating_sub(1970)) * 365
+        + (year.saturating_sub(1969)) / 4
+        + (month.saturating_sub(1)) * 30
+        + (day.saturating_sub(1));
     Some(days_since_epoch * 86400 + hour * 3600 + min * 60 + sec)
 }
 
 pub fn generate_2026_fallback_drivers(session_key: u64) -> Vec<OpenF1Driver> {
     let list = [
         (1, "L NORRIS", "Lando NORRIS", "NOR", "McLaren", "F47600"),
-        (3, "M VERSTAPPEN", "Max VERSTAPPEN", "VER", "Red Bull Racing", "4781D7"),
-        (5, "G BORTOLETO", "Gabriel BORTOLETO", "BOR", "Audi", "F50537"),
-        (6, "I HADJAR", "Isack HADJAR", "HAD", "Red Bull Racing", "4781D7"),
+        (
+            3,
+            "M VERSTAPPEN",
+            "Max VERSTAPPEN",
+            "VER",
+            "Red Bull Racing",
+            "4781D7",
+        ),
+        (
+            5,
+            "G BORTOLETO",
+            "Gabriel BORTOLETO",
+            "BOR",
+            "Audi",
+            "F50537",
+        ),
+        (
+            6,
+            "I HADJAR",
+            "Isack HADJAR",
+            "HAD",
+            "Red Bull Racing",
+            "4781D7",
+        ),
         (10, "P GASLY", "Pierre GASLY", "GAS", "Alpine", "00A1E8"),
         (11, "S PEREZ", "Sergio PEREZ", "PER", "Cadillac", "909090"),
-        (12, "K ANTONELLI", "Kimi ANTONELLI", "ANT", "Mercedes", "00D7B6"),
-        (14, "F ALONSO", "Fernando ALONSO", "ALO", "Aston Martin", "229971"),
-        (16, "C LECLERC", "Charles LECLERC", "LEC", "Ferrari", "ED1131"),
-        (18, "L STROLL", "Lance STROLL", "STR", "Aston Martin", "229971"),
-        (23, "A ALBON", "Alexander ALBON", "ALB", "Williams", "1868DB"),
-        (27, "N HULKENBERG", "Nico HULKENBERG", "HUL", "Audi", "F50537"),
-        (30, "L LAWSON", "Liam LAWSON", "LAW", "Racing Bulls", "6C98FF"),
-        (31, "E OCON", "Esteban OCON", "OCO", "Haas F1 Team", "9C9FA2"),
-        (41, "A LINDBLAD", "Arvid LINDBLAD", "LIN", "Racing Bulls", "6C98FF"),
-        (43, "F COLAPINTO", "Franco COLAPINTO", "COL", "Alpine", "00A1E8"),
-        (44, "L HAMILTON", "Lewis HAMILTON", "HAM", "Ferrari", "ED1131"),
+        (
+            12,
+            "K ANTONELLI",
+            "Kimi ANTONELLI",
+            "ANT",
+            "Mercedes",
+            "00D7B6",
+        ),
+        (
+            14,
+            "F ALONSO",
+            "Fernando ALONSO",
+            "ALO",
+            "Aston Martin",
+            "229971",
+        ),
+        (
+            16,
+            "C LECLERC",
+            "Charles LECLERC",
+            "LEC",
+            "Ferrari",
+            "ED1131",
+        ),
+        (
+            18,
+            "L STROLL",
+            "Lance STROLL",
+            "STR",
+            "Aston Martin",
+            "229971",
+        ),
+        (
+            23,
+            "A ALBON",
+            "Alexander ALBON",
+            "ALB",
+            "Williams",
+            "1868DB",
+        ),
+        (
+            27,
+            "N HULKENBERG",
+            "Nico HULKENBERG",
+            "HUL",
+            "Audi",
+            "F50537",
+        ),
+        (
+            30,
+            "L LAWSON",
+            "Liam LAWSON",
+            "LAW",
+            "Racing Bulls",
+            "6C98FF",
+        ),
+        (
+            31,
+            "E OCON",
+            "Esteban OCON",
+            "OCO",
+            "Haas F1 Team",
+            "9C9FA2",
+        ),
+        (
+            41,
+            "A LINDBLAD",
+            "Arvid LINDBLAD",
+            "LIN",
+            "Racing Bulls",
+            "6C98FF",
+        ),
+        (
+            43,
+            "F COLAPINTO",
+            "Franco COLAPINTO",
+            "COL",
+            "Alpine",
+            "00A1E8",
+        ),
+        (
+            44,
+            "L HAMILTON",
+            "Lewis HAMILTON",
+            "HAM",
+            "Ferrari",
+            "ED1131",
+        ),
         (55, "C SAINZ", "Carlos SAINZ", "SAI", "Williams", "1868DB"),
-        (63, "G RUSSELL", "George RUSSELL", "RUS", "Mercedes", "00D7B6"),
-        (77, "V BOTTAS", "Valtteri BOTTAS", "BOT", "Cadillac", "909090"),
+        (
+            63,
+            "G RUSSELL",
+            "George RUSSELL",
+            "RUS",
+            "Mercedes",
+            "00D7B6",
+        ),
+        (
+            77,
+            "V BOTTAS",
+            "Valtteri BOTTAS",
+            "BOT",
+            "Cadillac",
+            "909090",
+        ),
         (81, "O PIASTRI", "Oscar PIASTRI", "PIA", "McLaren", "F47600"),
-        (87, "O BEARMAN", "Oliver BEARMAN", "BEA", "Haas F1 Team", "9C9FA2"),
+        (
+            87,
+            "O BEARMAN",
+            "Oliver BEARMAN",
+            "BEA",
+            "Haas F1 Team",
+            "9C9FA2",
+        ),
     ];
 
     list.iter()
@@ -1435,7 +1589,6 @@ pub async fn get_baked_track(
     let track = client.get_baked_track(session_key).await?;
     Ok(Json(track))
 }
-
 
 /// Request payload for replaying OpenF1 telemetry into a simulation `RaceState`.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]

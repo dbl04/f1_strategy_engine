@@ -117,4 +117,3 @@ pub fn create_router() -> Router {
         )
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }
-
