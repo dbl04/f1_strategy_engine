@@ -76,4 +76,27 @@ async fn test_simulate_endpoint() {
         .unwrap();
     let result: MultiStrategyResponse = serde_json::from_slice(&body).unwrap();
     assert!(result.optimal_strategy.is_valid_f1_rules);
+    assert!(result.optimal_strategy.monte_carlo_metrics.is_some());
 }
+
+#[tokio::test]
+async fn test_circuit_geometry_by_id_endpoint() {
+    let app = create_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/circuit-geometry/monza")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    assert!(!body.is_empty());
+}
+

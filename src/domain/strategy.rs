@@ -18,6 +18,21 @@ pub struct PitStopPlan {
     pub reasons: Vec<String>,
 }
 
+/// Stochastic Monte Carlo simulation outcome metrics.
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct MonteCarloMetrics {
+    /// Expected mean total duration across stochastic iterations (seconds).
+    pub expected_time_seconds: f64,
+    /// 10th percentile duration (best-case duration ceiling in seconds).
+    pub p10_time_seconds: f64,
+    /// 90th percentile duration (worst-case duration floor / risk exposure in seconds).
+    pub p90_time_seconds: f64,
+    /// Estimated win / optimum probability percentage (0.0 to 100.0%).
+    pub win_probability_pct: f64,
+    /// Risk exposure score (P90 - P10 spread in seconds).
+    pub risk_score: f64,
+}
+
 /// A complete race strategy option containing stint breakdowns and time predictions.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 pub struct StrategyOption {
@@ -41,6 +56,9 @@ pub struct StrategyOption {
     pub total_pit_stop_time_loss_seconds: f64,
     /// Time delta difference relative to optimal strategy (seconds).
     pub delta_to_optimal_seconds: f64,
+    /// Parallel Monte Carlo stochastic simulation metrics.
+    #[serde(default)]
+    pub monte_carlo_metrics: Option<MonteCarloMetrics>,
 }
 
 /// Delta advantage option computed for pitting earlier (undercut) or later (overcut) vs a competitor.
@@ -90,5 +108,6 @@ pub struct MultiStrategyResponse {
     #[serde(default)]
     pub safety_car_probability_per_lap: f64,
 }
+
 
 
