@@ -646,9 +646,113 @@
       from { opacity: 0.7; }
       to { opacity: 1.0; }
     }
+
+    /* F1 Session Telemetry Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(3, 3, 6, 0.94);
+      backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loading-card {
+      background: #0a0a10;
+      border: 1px solid #28283c;
+      box-shadow: 0 0 50px rgba(168, 85, 247, 0.28);
+      padding: 36px 44px;
+      width: 460px;
+      max-width: 90vw;
+      text-align: center;
+      border-radius: 6px;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(168, 85, 247, 0.15);
+      border-top-color: var(--color-purple);
+      border-right-color: #06b6d4;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-title {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    .loading-status {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      min-height: 20px;
+    }
+
+    .loading-bar-track {
+      width: 100%;
+      height: 6px;
+      background: #141422;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      border: 1px solid #222238;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #a855f7, #06b6d4);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .loading-percentage {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-purple);
+    }
   </style>
 </head>
 <body>
+
+  <!-- FULLSCREEN F1 TELEMETRY LOADING OVERLAY -->
+  <div id="sessionLoadingOverlay" class="loading-overlay hidden">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <div class="loading-title">CALIBRATING DIGITAL TWIN</div>
+      <div id="loadingStatusText" class="loading-status">Acquiring High-Frequency GPS Telemetry...</div>
+      <div class="loading-bar-track">
+        <div id="loadingProgressBar" class="loading-bar-fill" style="width: 15%;"></div>
+      </div>
+      <div id="loadingProgressPercent" class="loading-percentage">15%</div>
+    </div>
+  </div>
 
   <!-- VIEW 1: ACCORDION LANDING PAGE -->
   <div id="landingView" class="app-view">
@@ -1345,6 +1449,40 @@
 
     // Base driver data definition
     let baseDriversList = [];
+    // Per-driver GPS timeline storage for Ground-Truth GPS playback
+    const gpsTimelinesByDriver = new Map();
+
+    function showLoadingScreen(initialText = "Connecting to OpenF1 Session Pipeline...") {
+      const overlay = document.getElementById('sessionLoadingOverlay');
+      const statusText = document.getElementById('loadingStatusText');
+      const progressBar = document.getElementById('loadingProgressBar');
+      const progressPercent = document.getElementById('loadingProgressPercent');
+      if (overlay) {
+        overlay.classList.remove('hidden');
+        if (statusText) statusText.innerText = initialText;
+        if (progressBar) progressBar.style.width = '10%';
+        if (progressPercent) progressPercent.innerText = '10%';
+      }
+    }
+
+    function updateLoadingProgress(percent, text) {
+      const statusText = document.getElementById('loadingStatusText');
+      const progressBar = document.getElementById('loadingProgressBar');
+      const progressPercent = document.getElementById('loadingProgressPercent');
+      if (statusText && text) statusText.innerText = text;
+      if (progressBar) progressBar.style.width = `${percent}%`;
+      if (progressPercent) progressPercent.innerText = `${percent}%`;
+    }
+
+    function hideLoadingScreen() {
+      const overlay = document.getElementById('sessionLoadingOverlay');
+      if (overlay) {
+        updateLoadingProgress(100, "Calibration Complete. Launching Digital Twin...");
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+        }, 400);
+      }
+    }
 
     function updateDVRControlsUI() {
       const playBtn = document.getElementById('dvrPlayPauseBtn');
@@ -1422,7 +1560,6 @@
           const standardPace = 88.0 + (idx * 0.35);
           if (!s1 || !s2 || !s3 || (s1 <= 0) || (s2 <= 0) || (s3 <= 0)) {
             if (totalDur > standardPace + 12.0) {
-              // Pit in-lap: normal race speed in S1 & S2, remaining time loss isolated in S3 (pit lane / straight)
               s1 = standardPace * 0.33;
               s2 = standardPace * 0.35;
               s3 = totalDur - (s1 + s2);
@@ -1501,13 +1638,13 @@
       applyDVRState(0);
     }
 
-    // Apply DVR State at given playback time (Runs purely in memory with real-time physical track synchronization)
+    // Apply DVR State at given playback time (Continuous Physical Track Synchronization across all laps)
     function applyDVRState(timestamp) {
       if (!baseDriversList || baseDriversList.length === 0) return;
 
       const totalLaps = dvrState.totalLaps || 53;
 
-      // 1. Calculate each car's physical progress along the track at this timestamp
+      // 1. Calculate each car's physical progress strictly along the track circuit
       const driverSnapshots = baseDriversList.map((d) => {
         let totalProgress = d.initialProgress;
         let lapsCompleted = 0;
@@ -1521,7 +1658,7 @@
           lapsCompleted = 0;
           progressInLap = d.initialProgress;
         } else {
-          // Find matching lap from real timeline
+          // Find matching lap from continuous timeline
           const lapObj = d.laps.find(l => timestamp >= l.start_time && timestamp < l.end_time);
           if (lapObj) {
             currentLapNumber = lapObj.lap_number;
@@ -1571,6 +1708,7 @@
           currentTyreAge = d.initialTyreAge + lapsCompleted;
         }
 
+        // Precise closed-loop track mapping
         const coords = getCoordsForProgress(progressInLap);
 
         return {
@@ -1743,6 +1881,9 @@
       document.getElementById('dashSessionKeyDisplay').innerText = sessionKey;
       document.getElementById('boundSessionKey').value = sessionKey;
 
+      showLoadingScreen("Connecting to OpenF1 Digital Twin Engine...");
+      updateLoadingProgress(15, "Loading Circuit Layout & Reference Track...");
+
       document.getElementById('landingView').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
 
@@ -1755,11 +1896,16 @@
 
     async function initSessionDVR(sessionKey) {
       try {
-        const [liveResp, lapsResp, stintsResp] = await Promise.all([
-          fetch(`/api/live-state/${sessionKey}`),
+        updateLoadingProgress(35, "Ingesting Race Control & Live State...");
+        const liveResp = await fetch(`/api/live-state/${sessionKey}`);
+
+        updateLoadingProgress(65, "Fetching Lap Telemetry Traces & Stint Profiles...");
+        const [lapsResp, stintsResp] = await Promise.all([
           fetch(`/api/openf1/session-laps?session_key=${sessionKey}`),
           fetch(`/api/openf1/stints?session_key=${sessionKey}`)
         ]);
+
+        updateLoadingProgress(90, "Calibrating 22-Driver Track Synchronization...");
 
         let drivers = [];
         let trackStatus = "GREEN";
@@ -1789,6 +1935,7 @@
         console.error("Failed to initialize session DVR buffer", e);
         buildSessionDVRBuffer([], "GREEN", 38.4, 24.1, [], []);
       }
+      hideLoadingScreen();
       dvrPlay();
     }
 

@@ -27,6 +27,7 @@ use crate::domain::{
         openf1::get_openf1_drivers,
         openf1::get_openf1_laps,
         openf1::get_openf1_session_laps,
+        openf1::get_openf1_gps_telemetry,
         openf1::get_openf1_locations,
         openf1::get_openf1_positions,
         openf1::get_openf1_intervals,
@@ -59,6 +60,7 @@ use crate::domain::{
         openf1::OpenF1CarData,
         openf1::OpenF1Location,
         openf1::NormalizedTrackPoint,
+        openf1::DriverGpsSample,
         openf1::OpenF1Position,
         openf1::OpenF1Interval,
         openf1::OpenF1Stint,
@@ -94,6 +96,10 @@ pub fn create_router() -> Router {
         .route(
             "/api/openf1/session-laps",
             get(openf1::get_openf1_session_laps),
+        )
+        .route(
+            "/api/openf1/gps-telemetry",
+            get(openf1::get_openf1_gps_telemetry),
         )
         .route("/api/openf1/location", get(openf1::get_openf1_locations))
         .route("/api/openf1/position", get(openf1::get_openf1_positions))

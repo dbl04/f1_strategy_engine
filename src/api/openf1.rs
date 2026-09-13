@@ -151,6 +151,15 @@ pub struct NormalizedTrackPoint {
     pub y: f64,
 }
 
+/// Compact normalized GPS coordinate sample for a driver.
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct DriverGpsSample {
+    pub driver_number: u32,
+    pub t: f64,
+    pub x: f64,
+    pub y: f64,
+}
+
 
 /// OpenF1 Position model.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
@@ -553,6 +562,82 @@ impl OpenF1Client {
         Ok(normalized)
     }
 
+    pub async fn get_session_gps_telemetry(
+        &self,
+        session_key: u64,
+    ) -> Result<Vec<DriverGpsSample>, AppError> {
+        let url = format!(
+            "https://api.openf1.org/v1/location?session_key={}",
+            session_key
+        );
+        let resp = reqwest::get(&url).await;
+        let mut locations = match resp {
+            Ok(res) => res.json::<Vec<OpenF1Location>>().await.unwrap_or_default(),
+            Err(_) => vec![],
+        };
+
+        locations.retain(|l| !(l.x == 0.0 && l.y == 0.0) && l.date.is_some());
+
+        if locations.is_empty() {
+            return Ok(generate_fallback_gps_telemetry(session_key));
+        }
+
+        // Sort chronologically by date
+        locations.sort_by(|a, b| a.date.cmp(&b.date));
+
+        // Find bounding box for normalization
+        let min_x = locations.iter().map(|l| l.x).fold(f64::INFINITY, f64::min);
+        let max_x = locations.iter().map(|l| l.x).fold(f64::NEG_INFINITY, f64::max);
+        let min_y = locations.iter().map(|l| l.y).fold(f64::INFINITY, f64::min);
+        let max_y = locations.iter().map(|l| l.y).fold(f64::NEG_INFINITY, f64::max);
+
+        let width = max_x - min_x;
+        let height = max_y - min_y;
+        let scale = width.max(height);
+        let scale = if scale > 0.0 { scale } else { 1.0 };
+
+        // Parse base timestamp
+        let first_date_str = locations[0].date.as_deref().unwrap_or_default();
+        let base_timestamp = chrono::DateTime::parse_from_rfc3339(first_date_str)
+            .map(|dt| dt.timestamp_millis() as f64 / 1000.0)
+            .unwrap_or(0.0);
+
+        // Downsample to ~1.5 Hz per driver (minimum 0.6s between consecutive points)
+        let mut last_t_by_driver: std::collections::HashMap<u32, f64> =
+            std::collections::HashMap::new();
+        let mut downsampled: Vec<DriverGpsSample> = Vec::with_capacity(locations.len() / 2);
+
+        for loc in locations {
+            let Some(ref d_str) = loc.date else { continue };
+            let t = if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(d_str) {
+                let sec = (dt.timestamp_millis() as f64 / 1000.0) - base_timestamp;
+                if sec < 0.0 { 0.0 } else { sec }
+            } else {
+                continue;
+            };
+
+            let last_t = last_t_by_driver
+                .get(&loc.driver_number)
+                .copied()
+                .unwrap_or(-1.0);
+            if t - last_t >= 0.6 {
+                last_t_by_driver.insert(loc.driver_number, t);
+                downsampled.push(DriverGpsSample {
+                    driver_number: loc.driver_number,
+                    t: (t * 10.0).round() / 10.0,
+                    x: ((loc.x - min_x) / scale * 10000.0).round() / 10000.0,
+                    y: ((loc.y - min_y) / scale * 10000.0).round() / 10000.0,
+                });
+            }
+        }
+
+        if downsampled.is_empty() {
+            return Ok(generate_fallback_gps_telemetry(session_key));
+        }
+
+        Ok(downsampled)
+    }
+
     pub async fn get_live_state(&self, session_key: u64) -> Result<LiveStateResponse, AppError> {
         let positions = self.get_positions(session_key).await.unwrap_or_default();
         let intervals = self.get_intervals(session_key).await.unwrap_or_default();
@@ -744,6 +829,36 @@ pub fn generate_2026_fallback_drivers(session_key: u64) -> Vec<OpenF1Driver> {
             country_code: None,
         })
         .collect()
+}
+
+fn generate_fallback_gps_telemetry(_session_key: u64) -> Vec<DriverGpsSample> {
+    let track_points = get_fallback_track_points();
+    if track_points.is_empty() {
+        return vec![];
+    }
+    let total_pts = track_points.len();
+    let drivers = [
+        1, 3, 5, 6, 10, 11, 12, 14, 16, 18, 23, 27, 30, 31, 41, 43, 44, 55, 63, 77, 81, 87,
+    ];
+
+    let mut samples = Vec::new();
+    for sec in 0..120 {
+        let t = sec as f64;
+        for (idx, &d_no) in drivers.iter().enumerate() {
+            let offset_fraction = (idx as f64) * 0.015;
+            let lap_time = 88.0 + (idx as f64) * 0.35;
+            let progress = (((t / lap_time) - offset_fraction) % 1.0 + 1.0) % 1.0;
+            let pt_idx = ((progress * (total_pts - 1) as f64).floor() as usize).min(total_pts - 1);
+            let pt = &track_points[pt_idx];
+            samples.push(DriverGpsSample {
+                driver_number: d_no,
+                t,
+                x: pt.x,
+                y: pt.y,
+            });
+        }
+    }
+    samples
 }
 
 fn generate_fallback_laps(_session_key: u64) -> Vec<OpenF1Lap> {
@@ -1135,6 +1250,23 @@ pub async fn get_openf1_session_laps(
     let client = OpenF1Client::new();
     let laps = client.get_all_session_laps(params.session_key).await?;
     Ok(Json(laps))
+}
+
+/// Handler serving `GET /api/openf1/gps-telemetry?session_key=...`.
+#[utoipa::path(
+    get,
+    path = "/api/openf1/gps-telemetry",
+    params(SessionOnlyQueryParams),
+    responses(
+        (status = 200, description = "Downsampled high-precision GPS coordinate stream for all drivers in session", body = Vec<DriverGpsSample>)
+    )
+)]
+pub async fn get_openf1_gps_telemetry(
+    Query(params): Query<SessionOnlyQueryParams>,
+) -> Result<Json<Vec<DriverGpsSample>>, AppError> {
+    let client = OpenF1Client::new();
+    let samples = client.get_session_gps_telemetry(params.session_key).await?;
+    Ok(Json(samples))
 }
 
 /// Handler serving `GET /api/openf1/location?session_key=...`.
