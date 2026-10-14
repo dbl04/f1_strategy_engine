@@ -227,6 +227,8 @@ async fn test_simulate_driver_strategy_endpoint() {
     assert!(result.projected_finish_position >= 1);
     assert!(!result.traffic_risk.is_empty());
     assert!(result.monte_carlo_metrics.win_probability_pct > 0.0);
+    assert!(!result.lap_timeline.is_empty());
 }
+
 
 

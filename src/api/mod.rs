@@ -58,6 +58,7 @@ use crate::domain::{
         WeatherForecast,
         crate::engine::driver_sim::DriverSimulationRequest,
         crate::engine::driver_sim::DriverSimulationResponse,
+        crate::engine::driver_sim::SimulatedLapSnapshot,
         crate::engine::multi_driver::MultiDriverSimRequest,
         crate::engine::multi_driver::MultiDriverSimResponse,
         crate::engine::multi_driver::DriverStrategyInput,

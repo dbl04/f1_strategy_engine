@@ -562,6 +562,93 @@
       text-align: right;
     }
 
+    /* Phase 6: Simulated Trajectory Overlay Styles */
+    .sim-mode-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(90deg, #180826 0%, #0a0414 100%);
+      border-bottom: 2px solid var(--color-purple);
+      padding: 5px 12px;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      z-index: 5;
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
+    }
+
+    .sim-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-indicator-beacon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50% !important;
+      background: var(--color-purple);
+      box-shadow: 0 0 10px var(--color-purple);
+      animation: pulse 0.8s infinite alternate;
+      display: inline-block;
+    }
+
+    .sim-banner-right {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .sim-banner-btn {
+      background: #11111e;
+      border: 1px solid var(--border-light);
+      color: #ffffff;
+      padding: 3px 8px;
+      font-size: 9px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sim-banner-btn:hover {
+      border-color: var(--color-purple);
+      color: var(--color-purple);
+    }
+
+    .btn-exit-sim {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--color-red);
+      color: #ff8888;
+    }
+    .btn-exit-sim:hover {
+      background: var(--color-red);
+      color: #ffffff;
+    }
+
+    .sim-scrubber-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      background: #0e0618;
+      border-top: 1px solid var(--color-purple);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .sim-row-pill {
+      background: var(--color-purple);
+      color: #000000;
+      font-weight: 800;
+      font-size: 8px;
+      padding: 1px 4px;
+      border-radius: 2px !important;
+      margin-left: 3px;
+    }
+
+    .sim-row-active {
+      background-color: rgba(6, 182, 212, 0.15) !important;
+      border-left: 3px solid var(--color-cyan) !important;
+    }
+
+
     /* Right Panel Tabs */
     .tab-bar {
       display: flex;
@@ -1192,6 +1279,23 @@
               <button id="btnVizRing" class="viz-toggle-btn" onclick="switchVisualizer('ring')">⭕ CIRCULAR RADAR</button>
             </div>
           </div>
+
+          <!-- Phase 6: Simulated Strategy Trajectory Overlay Banner -->
+          <div id="simModeBanner" class="sim-mode-banner hidden">
+            <div class="sim-banner-left">
+              <span class="sim-indicator-beacon"></span>
+              <span style="font-weight: 800;">STRATEGY SIMULATION ACTIVE:</span>
+              <span id="simBannerDriver" style="color: var(--color-purple); font-weight: 800;">#1 NOR</span>
+              <span id="simBannerPlan" style="color: #ffffff;">(BOX L22 ➔ HARD)</span>
+              <span id="simBannerLap" style="background: #1e1030; border: 1px solid var(--color-purple); padding: 1px 6px; font-weight: 700;">LAP 20/53</span>
+              <span id="simBannerPos" class="pos-gain">PROJ P2 (▲1)</span>
+            </div>
+            <div class="sim-banner-right">
+              <button class="sim-banner-btn" id="btnToggleGhost" onclick="simToggleGhost()">👻 GHOST: ON</button>
+              <button class="sim-banner-btn btn-exit-sim" onclick="exitSimulationMode()">↺ RESET TO LIVE</button>
+            </div>
+          </div>
+
           <canvas id="trackCanvas"></canvas>
           <canvas id="ringCanvas" class="hidden"></canvas>
           <div id="mapTooltip" class="map-tooltip"></div>
@@ -1210,7 +1314,22 @@
             </div>
             <div class="dvr-time-display" id="dvrTimeDisplay">T + 00:00:00</div>
           </div>
+
+          <!-- Phase 6: Simulated Trajectory Lap Scrubber Bar -->
+          <div id="simScrubberBar" class="sim-scrubber-bar hidden">
+            <button id="simPlayPauseBtn" class="dvr-btn active-play" onclick="simTogglePlay()">⏸ PAUSE SIM</button>
+            <div class="dvr-speed-group">
+              <button class="dvr-speed-btn active" id="simSpeed1" onclick="simSetSpeed(1)">1x</button>
+              <button class="dvr-speed-btn" id="simSpeed2" onclick="simSetSpeed(2)">2x</button>
+              <button class="dvr-speed-btn" id="simSpeed5" onclick="simSetSpeed(5)">5x</button>
+            </div>
+            <div class="dvr-scrubber-wrapper">
+              <input type="range" id="simLapScrubber" min="0" max="33" value="0" step="1" oninput="simOnLapScrub(this.value)">
+            </div>
+            <div class="dvr-time-display" id="simLapDisplay">LAP 20 / 53</div>
+          </div>
         </div>
+
 
         <div class="telemetry-container">
           <div class="panel-header" style="background: transparent;">
@@ -1481,6 +1600,25 @@
     const lerpDriversMap = new Map();
     let refTrackPoints = [];
 
+    // Phase 6: Simulated Trajectory Overlay State
+    const simOverlayState = {
+      isActive: false,
+      driverNumber: 1,
+      driverTla: "NOR",
+      ghostMode: true,
+      isPlaying: true,
+      playbackSpeed: 1,
+      simulatedProgress: 0.0,
+      activeTimelineIndex: 0,
+      timeline: [],
+      totalLaps: 53,
+      currentLap: 20,
+      pitLap: 22,
+      newCompound: "HARD",
+      projectedFinishPos: 2,
+      posDelta: 1
+    };
+
     // Helper: Map (x,y) to normalized track progress s in [0.0, 1.0]
     function getLapProgressForCoords(x, y) {
       if (!refTrackPoints || refTrackPoints.length === 0) return 0;
@@ -1689,7 +1827,52 @@
           const py = centerY + (radarRadius * Math.sin(theta));
 
           const isFollowed = (followedDriverNo === driver.driver_number);
+          const isSimCar = (simOverlayState.isActive && simOverlayState.driverNumber === driver.driver_number);
           const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
+
+          if (isSimCar) {
+            if (simOverlayState.ghostMode) {
+              // Draw Live Ghost Car outline
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(px, py, 5, 0, Math.PI * 2);
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+              ctx.setLineDash([2, 2]);
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              ctx.restore();
+            }
+
+            const simTheta = (2 * Math.PI * simOverlayState.simulatedProgress) - (Math.PI / 2);
+            const drawPx = centerX + (radarRadius * Math.cos(simTheta));
+            const drawPy = centerY + (radarRadius * Math.sin(simTheta));
+            const simLabelR = radarRadius + (Math.sin(simTheta) > 0 ? 14 : -14);
+            const drawLx = centerX + (simLabelR * Math.cos(simTheta));
+            const drawLy = centerY + (simLabelR * Math.sin(simTheta));
+
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, 14, 0, Math.PI * 2);
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, 7, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 10px JetBrains Mono';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${driver.tla} SIM`, drawLx, drawLy);
+            return;
+          }
 
           if (isFollowed) {
             ctx.beginPath();
@@ -1723,6 +1906,7 @@
           ctx.textBaseline = 'middle';
           ctx.fillText(`${driver.tla}`, lx, ly);
         });
+
       }
     }
 
@@ -1967,7 +2151,75 @@
           this.screenPositions.push({ x: px, y: py, driver });
 
           const isFollowed = (followedDriverNo === driver.driver_number);
+          const isSimCar = (simOverlayState.isActive && simOverlayState.driverNumber === driver.driver_number);
           const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
+
+          if (isSimCar) {
+            if (simOverlayState.ghostMode) {
+              // Draw Live Ghost Car outline on 2D map
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(px, py, 6, 0, Math.PI * 2);
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+              ctx.setLineDash([2, 2]);
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+              ctx.restore();
+
+              // Ghost Car Label
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+              ctx.font = '8px JetBrains Mono';
+              ctx.fillText(`${driver.tla} (LIVE)`, px + 8, py - 6);
+            }
+
+            // Map simulated progress to track coordinates
+            const simNorm = getCoordsForProgress(simOverlayState.simulatedProgress);
+            const simProj = project(simNorm.x, simNorm.y, this.canvas.width, this.canvas.height);
+            const drawPx = simProj.cx;
+            const drawPy = simProj.cy;
+
+            this.screenPositions.push({ x: drawPx, y: drawPy, driver });
+
+            // Glowing cyan halo for simulated car
+            const now = Date.now();
+            const pulseR = 14 + Math.sin(now / 150) * 4;
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, pulseR, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.65)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.35)';
+            ctx.fill();
+
+            // Outer dot with team color
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, 8, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Core white dot
+            ctx.beginPath();
+            ctx.arc(drawPx, drawPy, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            // Acronym SIM Pill Badge
+            const badgeX = drawPx + 8;
+            const badgeY = drawPy - 7;
+            ctx.fillStyle = '#061a24';
+            ctx.fillRect(badgeX, badgeY, 44, 12);
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(badgeX, badgeY, 44, 12);
+
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 9px JetBrains Mono';
+            ctx.fillText(`${driver.tla} SIM`, badgeX + 3, badgeY + 9);
+            return;
+          }
 
           // Pulsating halo for followed driver
           if (isFollowed) {
@@ -2518,6 +2770,21 @@
         applyDVRState(dvrState.currentTimestamp);
       }
 
+      // Phase 6: Advance Simulated Strategy Trajectory Dot and Progress
+      if (simOverlayState.isActive && simOverlayState.isPlaying) {
+        // Average lap duration ~85s -> normalized progress increment per second ~ 0.0118 at 1x
+        const lapAdvance = (deltaTime * 0.012 * simOverlayState.playbackSpeed);
+        simOverlayState.simulatedProgress += lapAdvance;
+        if (simOverlayState.simulatedProgress >= 1.0) {
+          simOverlayState.simulatedProgress %= 1.0;
+          if (simOverlayState.timeline.length > 0 && simOverlayState.activeTimelineIndex < simOverlayState.timeline.length - 1) {
+            simOverlayState.activeTimelineIndex++;
+            updateSimScrubberUI();
+            renderTimingTowerTable();
+          }
+        }
+      }
+
       // Smooth Linear Interpolation towards targets with teleport guard
       lerpDriversMap.forEach(driver => {
         const distSq = (driver.targetX - driver.currentX) ** 2 + (driver.targetY - driver.currentY) ** 2;
@@ -2715,12 +2982,32 @@
       if (!tbody) return;
       tbody.innerHTML = '';
 
-      const drivers = Array.from(lerpDriversMap.values());
+      let drivers = Array.from(lerpDriversMap.values()).map(d => ({ ...d }));
+
+      // If Simulation Overlay is active, inject projected state for the simulated driver
+      if (simOverlayState.isActive && simOverlayState.timeline.length > 0) {
+        const snap = simOverlayState.timeline[simOverlayState.activeTimelineIndex];
+        if (snap) {
+          const simIdx = drivers.findIndex(d => d.driver_number === simOverlayState.driverNumber);
+          if (simIdx !== -1) {
+            drivers[simIdx].position = snap.projected_position;
+            drivers[simIdx].gap = snap.projected_position === 1 ? 'LEADER' : `+${snap.gap_to_leader_seconds.toFixed(1)}s`;
+            drivers[simIdx].interval = snap.interval_seconds > 0 ? `+${snap.interval_seconds.toFixed(1)}s` : '―';
+            drivers[simIdx].compound = snap.compound;
+            drivers[simIdx].tyre_age = snap.tyre_age;
+            drivers[simIdx].isSimRow = true;
+            drivers[simIdx].isPitLap = snap.is_pit_lap;
+            drivers[simIdx].last_lap_time = snap.lap_time_seconds;
+          }
+        }
+      }
+
       drivers.sort((a, b) => a.position - b.position);
 
       drivers.forEach(d => {
         const tr = document.createElement('tr');
         if (d.driver_number === followedDriverNo) tr.className = 'followed-row';
+        if (d.isSimRow) tr.classList.add('sim-row-active');
 
         tr.onclick = (e) => selectFollowedDriver(d.driver_number, d.tla, d.compound, d.tyre_age, d.pit_stop_count, d.team, e);
 
@@ -2730,7 +3017,10 @@
         const lastLapStr = d.last_lap_time ? formatLapTime(d.last_lap_time) : (d.position <= 3 ? '1:28.452' : '1:29.118');
 
         tr.innerHTML = `
-          <td style="font-weight: 700;">P${d.position}</td>
+          <td style="font-weight: 700;">
+            P${d.position}
+            ${d.isSimRow ? '<span class="sim-row-pill">SIM</span>' : ''}
+          </td>
           <td style="color: var(--text-muted); font-size: 10px;">${d.driver_number}</td>
           <td>
             <div class="driver-cell">
@@ -2742,7 +3032,7 @@
           <td style="font-size: 10px;">${d.interval}</td>
           <td><span class="compound-tag ${compInfo.cssClass}">${compInfo.tag}</span></td>
           <td style="font-size: 10px; color: var(--text-muted);">L${d.tyre_age || 0}</td>
-          <td><span class="pit-tag">${pits}</span></td>
+          <td><span class="pit-tag">${pits}${d.isPitLap ? ' (IN)' : ''}</span></td>
           <td><span class="drs-tag ${d.drs_active ? 'drs-active' : 'drs-inactive'}">${d.drs_active ? 'DRS' : '---'}</span></td>
           <td style="font-size: 10px; color: #bbbbdd;">${lastLapStr}</td>
         `;
@@ -2940,6 +3230,127 @@
       const odiEl = document.getElementById('simDynamicOdiInfo');
       if (odiEl) {
         odiEl.innerText = `Dynamic ODI: ${data.dynamic_odi_rating} • Undercut: +${data.undercut_advantage_seconds}s`;
+      }
+
+      // Phase 6: Activate visual simulation trajectory on track canvas and timing tower
+      activateSimulationTrajectory(data);
+    }
+
+    // ==========================================
+    // PHASE 6: SIMULATED TRAJECTORY CONTROLLERS
+    // ==========================================
+    function activateSimulationTrajectory(data) {
+      if (!data) return;
+      simOverlayState.isActive = true;
+      simOverlayState.driverNumber = data.driver_number;
+      simOverlayState.driverTla = data.driver_tla || "NOR";
+      simOverlayState.currentLap = data.current_lap || 20;
+      simOverlayState.pitLap = data.pit_lap || 22;
+      simOverlayState.newCompound = data.new_compound || "HARD";
+      simOverlayState.projectedFinishPos = data.projected_finish_position || 1;
+      simOverlayState.posDelta = data.position_delta || 0;
+      simOverlayState.timeline = data.lap_timeline || [];
+      simOverlayState.activeTimelineIndex = 0;
+      simOverlayState.isPlaying = true;
+
+      // Initialize simulated dot progress from followed driver's current progress
+      const currentDriver = lerpDriversMap.get(data.driver_number);
+      if (currentDriver && currentDriver.progress !== undefined && currentDriver.progress !== null) {
+        simOverlayState.simulatedProgress = currentDriver.progress;
+      } else {
+        simOverlayState.simulatedProgress = 0.5;
+      }
+
+      // Show Banner and Scrubber
+      const banner = document.getElementById('simModeBanner');
+      const scrubber = document.getElementById('simScrubberBar');
+      if (banner) banner.classList.remove('hidden');
+      if (scrubber) scrubber.classList.remove('hidden');
+
+      // Update Banner UI
+      const dEl = document.getElementById('simBannerDriver');
+      if (dEl) dEl.innerText = `#${data.driver_number} ${data.driver_tla}`;
+      const pEl = document.getElementById('simBannerPlan');
+      if (pEl) pEl.innerText = `(BOX L${data.pit_lap} ➔ ${data.new_compound})`;
+      const posEl = document.getElementById('simBannerPos');
+      if (posEl) {
+        const sign = data.position_delta >= 0 ? '▲' : '▼';
+        posEl.className = data.position_delta >= 0 ? 'pos-gain' : 'pos-loss';
+        posEl.innerText = `PROJ P${data.projected_finish_position} (${sign}${Math.abs(data.position_delta)})`;
+      }
+
+      // Configure Lap Scrubber
+      const lapRange = document.getElementById('simLapScrubber');
+      if (lapRange) {
+        lapRange.min = 0;
+        lapRange.max = Math.max(0, simOverlayState.timeline.length - 1);
+        lapRange.value = 0;
+      }
+
+      updateSimScrubberUI();
+      renderTimingTowerTable();
+    }
+
+    function exitSimulationMode() {
+      simOverlayState.isActive = false;
+      const banner = document.getElementById('simModeBanner');
+      const scrubber = document.getElementById('simScrubberBar');
+      if (banner) banner.classList.add('hidden');
+      if (scrubber) scrubber.classList.add('hidden');
+      renderTimingTowerTable();
+    }
+
+    function simToggleGhost() {
+      simOverlayState.ghostMode = !simOverlayState.ghostMode;
+      const btn = document.getElementById('btnToggleGhost');
+      if (btn) btn.innerText = simOverlayState.ghostMode ? '👻 GHOST: ON' : '👻 GHOST: OFF';
+    }
+
+    function simTogglePlay() {
+      simOverlayState.isPlaying = !simOverlayState.isPlaying;
+      const btn = document.getElementById('simPlayPauseBtn');
+      if (btn) {
+        btn.innerText = simOverlayState.isPlaying ? '⏸ PAUSE SIM' : '▶ PLAY SIM';
+        btn.classList.toggle('active-play', simOverlayState.isPlaying);
+      }
+    }
+
+    function simSetSpeed(speed) {
+      simOverlayState.playbackSpeed = speed;
+      [1, 2, 5].forEach(s => {
+        const btn = document.getElementById(`simSpeed${s}`);
+        if (btn) btn.classList.toggle('active', s === speed);
+      });
+    }
+
+    function simOnLapScrub(val) {
+      const idx = parseInt(val) || 0;
+      simOverlayState.activeTimelineIndex = Math.max(0, Math.min(simOverlayState.timeline.length - 1, idx));
+      updateSimScrubberUI();
+      renderTimingTowerTable();
+    }
+
+    function updateSimScrubberUI() {
+      const snap = simOverlayState.timeline[simOverlayState.activeTimelineIndex];
+      const curLap = snap ? snap.lap_number : (simOverlayState.currentLap + simOverlayState.activeTimelineIndex);
+      const totalLaps = 53;
+
+      const lapDisp = document.getElementById('simLapDisplay');
+      if (lapDisp) lapDisp.innerText = `LAP ${curLap} / ${totalLaps}`;
+
+      const bannerLap = document.getElementById('simBannerLap');
+      if (bannerLap) bannerLap.innerText = `LAP ${curLap} / ${totalLaps}`;
+
+      const lapRange = document.getElementById('simLapScrubber');
+      if (lapRange && parseInt(lapRange.value) !== simOverlayState.activeTimelineIndex) {
+        lapRange.value = simOverlayState.activeTimelineIndex;
+      }
+
+      if (snap) {
+        const posEl = document.getElementById('simBannerPos');
+        if (posEl) {
+          posEl.innerText = `PROJ P${snap.projected_position}${snap.is_pit_lap ? ' (BOX NOW)' : ''}`;
+        }
       }
     }
 

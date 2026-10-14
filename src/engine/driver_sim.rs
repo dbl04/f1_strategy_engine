@@ -32,6 +32,29 @@ pub struct DriverSimulationRequest {
     pub target_rival_number: Option<u32>,
 }
 
+/// Snapshot of driver and field state for a single simulated lap.
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct SimulatedLapSnapshot {
+    /// Lap number (e.g. 21, 22, ... 53).
+    pub lap_number: u32,
+    /// Compound active on this lap.
+    pub compound: TireCompound,
+    /// Cumulative age of tyre set on this lap.
+    pub tyre_age: u32,
+    /// Projected running track position on this lap.
+    pub projected_position: u32,
+    /// Projected gap to race leader in seconds.
+    pub gap_to_leader_seconds: f64,
+    /// Interval to car ahead in seconds.
+    pub interval_seconds: f64,
+    /// Lap time duration in seconds.
+    pub lap_time_seconds: f64,
+    /// True if the car enters the pit lane on this lap.
+    pub is_pit_lap: bool,
+    /// Dynamic overtaking difficulty index on this lap.
+    pub dynamic_odi: f64,
+}
+
 /// Comprehensive outcome of single-driver strategy simulation.
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 pub struct DriverSimulationResponse {
@@ -75,7 +98,10 @@ pub struct DriverSimulationResponse {
     pub strategy_summary: String,
     /// True if the strategy was triggered as an immediate "Box This Lap".
     pub is_box_this_lap: bool,
+    /// Lap-by-lap progression timeline for trajectory animation and scrubbers.
+    pub lap_timeline: Vec<SimulatedLapSnapshot>,
 }
+
 
 /// Returns metadata (TLA, Team, Teammate Number, Teammate TLA) for a 2026 grid driver.
 pub fn get_driver_metadata(driver_number: u32) -> (&'static str, &'static str, u32, &'static str) {
@@ -369,6 +395,96 @@ pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulati
         )
     };
 
+    // 10. Generate detailed lap-by-lap simulation timeline for visual trajectory tracking
+    let mut lap_timeline = Vec::new();
+    let mut cum_ego = ego_initial_gap;
+    let mut comp_cum_times: Vec<f64> = competitors.iter().map(|c| c.initial_gap).collect();
+
+    for l in current_lap..=total_laps {
+        let (active_compound, active_age, lap_time, is_pit) = if l < pit_lap {
+            let age = (initial_tyre_age + (l - current_lap) as f64) as u32;
+            let time = base_pace + (age as f64 * 0.065);
+            (TireCompound::Medium, age, time, false)
+        } else if l == pit_lap {
+            let age = (initial_tyre_age + (l - current_lap) as f64) as u32;
+            let time = base_pace + (age as f64 * 0.065) + pit_loss;
+            (req.new_compound.clone(), age, time, true)
+        } else {
+            let age = (l - pit_lap) as u32;
+            let time = base_pace + compound_delta + (age as f64 * compound_deg_per_lap);
+            (req.new_compound.clone(), age, time, false)
+        };
+
+
+        cum_ego += lap_time;
+
+        // Advance competitors for this lap
+        for (idx, comp) in competitors.iter().enumerate() {
+            if comp.tla == tla {
+                comp_cum_times[idx] = cum_ego;
+            } else {
+                let age = if l < comp.pit_lap {
+                    15.0 + (l - current_lap) as f64
+                } else {
+                    (l - comp.pit_lap) as f64
+                };
+                let comp_lap_time = if l == comp.pit_lap {
+                    base_pace + (age * comp.deg_rate) + pit_loss
+                } else if l > comp.pit_lap {
+                    base_pace + 0.70 + (age * 0.035)
+                } else {
+                    base_pace + (age * comp.deg_rate)
+                };
+                comp_cum_times[idx] += comp_lap_time;
+            }
+        }
+
+        // Determine ego's position on this lap
+        let leader_time = comp_cum_times.iter().cloned().fold(f64::INFINITY, f64::min);
+        let mut rank = 1;
+        let mut min_gap_ahead_on_lap = 999.0;
+        for (idx, &c_time) in comp_cum_times.iter().enumerate() {
+            if competitors[idx].tla != tla {
+                if c_time < cum_ego {
+                    rank += 1;
+                    let diff = cum_ego - c_time;
+                    if diff < min_gap_ahead_on_lap {
+                        min_gap_ahead_on_lap = diff;
+                    }
+                }
+            }
+        }
+
+        let gap_to_leader = ((cum_ego - leader_time).max(0.0) * 10.0).round() / 10.0;
+        let interval = if rank == 1 {
+            0.0
+        } else if min_gap_ahead_on_lap < 900.0 {
+            (min_gap_ahead_on_lap * 10.0).round() / 10.0
+        } else {
+            gap_to_leader
+        };
+
+        let odi = calculate_dynamic_odi(
+            0.28,
+            l,
+            total_laps,
+            if interval < 1.0 { 2 } else { 0 },
+            -compound_delta,
+        ).dynamic_odi;
+
+        lap_timeline.push(SimulatedLapSnapshot {
+            lap_number: l,
+            compound: active_compound,
+            tyre_age: active_age,
+            projected_position: rank,
+            gap_to_leader_seconds: gap_to_leader,
+            interval_seconds: interval,
+            lap_time_seconds: (lap_time * 100.0).round() / 100.0,
+            is_pit_lap: is_pit,
+            dynamic_odi: odi,
+        });
+    }
+
     DriverSimulationResponse {
         driver_number: req.driver_number,
         driver_tla: tla.to_string(),
@@ -390,8 +506,10 @@ pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulati
         blended_pace_seconds: (base_pace * 1000.0).round() / 1000.0,
         strategy_summary,
         is_box_this_lap,
+        lap_timeline,
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -416,7 +534,12 @@ mod tests {
         assert!(!res.traffic_risk.is_empty());
         assert!(res.monte_carlo_metrics.win_probability_pct > 0.0);
         assert!(!res.is_box_this_lap);
+        assert!(!res.lap_timeline.is_empty());
+        let pit_snapshot = res.lap_timeline.iter().find(|s| s.is_pit_lap);
+        assert!(pit_snapshot.is_some());
+        assert_eq!(pit_snapshot.unwrap().lap_number, 22);
     }
+
 
     #[test]
     fn test_simulate_driver_strategy_box_this_lap() {
