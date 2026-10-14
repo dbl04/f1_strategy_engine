@@ -153,3 +153,20 @@ pub async fn simulate_race(Json(payload): Json<RaceState>) -> Json<MultiStrategy
     let response = optimize_race_strategies(&payload);
     Json(response)
 }
+
+/// Executes multi-driver race projection with reactive competitor strategies and on-track battles.
+#[utoipa::path(
+    post,
+    path = "/api/simulate-multi",
+    request_body = crate::engine::multi_driver::MultiDriverSimRequest,
+    responses(
+        (status = 200, description = "Multi-driver race simulation result", body = crate::engine::multi_driver::MultiDriverSimResponse)
+    )
+)]
+pub async fn simulate_multi_driver(
+    Json(payload): Json<crate::engine::multi_driver::MultiDriverSimRequest>,
+) -> Json<crate::engine::multi_driver::MultiDriverSimResponse> {
+    let response = crate::engine::multi_driver::simulate_multi_driver_race(&payload);
+    Json(response)
+}
+

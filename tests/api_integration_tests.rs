@@ -120,3 +120,70 @@ async fn test_baked_track_endpoint() {
         .unwrap();
     assert!(!body.is_empty());
 }
+
+#[tokio::test]
+async fn test_simulate_multi_endpoint() {
+    let app = create_router();
+
+    let req = f1_strategy_engine::engine::multi_driver::MultiDriverSimRequest {
+        track_id: "silverstone".to_string(),
+        total_laps: Some(52),
+        current_lap: Some(25),
+        pit_loss_seconds: Some(20.5),
+        drivers: vec![],
+    };
+
+    let payload = serde_json::to_string(&req).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/simulate-multi")
+                .header("content-type", "application/json")
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let result: f1_strategy_engine::engine::multi_driver::MultiDriverSimResponse =
+        serde_json::from_slice(&body).unwrap();
+    assert_eq!(result.results.len(), 5);
+    assert!(!result.winner_driver_id.is_empty());
+}
+
+#[tokio::test]
+async fn test_live_state_endpoint() {
+    let app = create_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/live-state/9161")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let result: f1_strategy_engine::api::openf1::LiveStateResponse =
+        serde_json::from_slice(&body).unwrap();
+    assert!(!result.drivers.is_empty());
+    assert!(result.dynamic_odi.is_some());
+    // Check timing tower fields on driver 1
+    let first = &result.drivers[0];
+    assert!(!first.compound.is_empty());
+    assert!(first.current_lap > 0);
+}
+
