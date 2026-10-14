@@ -2,47 +2,61 @@
 .tower-scroll-container {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.tower-scroll-container::-webkit-scrollbar {
+  width: 5px;
+}
+.tower-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
 }
 
 .timing-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 11px;
+  font-family: var(--font-mono);
 }
 
 .timing-table th {
   position: sticky;
   top: 0;
-  background: var(--bg-surface);
+  background: rgba(16, 16, 26, 0.95);
+  backdrop-filter: blur(8px);
   color: var(--text-muted);
   text-align: left;
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--border-dark);
-  font-weight: 700;
-  font-size: 10px;
+  padding: 7px 5px;
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.6px;
   z-index: 2;
   user-select: none;
 }
 
 .timing-table td {
-  padding: 5px 4px;
-  border-bottom: 1px solid #111116;
+  padding: 6px 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   white-space: nowrap;
 }
 
 .timing-table tr {
   cursor: pointer;
-  transition: background-color 0.1s ease;
+  transition: all 0.12s ease;
   position: relative;
 }
 
 .timing-table tr:hover {
-  background-color: #12121c;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .timing-table tr.followed-row {
-  background-color: rgba(168, 85, 247, 0.2) !important;
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.22) 0%, rgba(168, 85, 247, 0.04) 100%) !important;
   border-left: 3px solid var(--color-purple);
+  box-shadow: inset 0 0 12px rgba(168, 85, 247, 0.1);
 }
 
 .driver-cell {
@@ -56,47 +70,51 @@
   height: 14px;
   display: inline-block;
   flex-shrink: 0;
+  border-radius: 1px;
 }
 
 .compound-tag {
-  padding: 1px 4px;
+  padding: 1px 5px;
   font-weight: 800;
-  font-size: 10px;
-  border-radius: 2px !important;
+  font-size: 9px;
+  border-radius: 3px;
   display: inline-block;
   min-width: 22px;
   text-align: center;
+  letter-spacing: 0.5px;
 }
-.comp-soft { color: #fff; background: var(--compound-soft); border: 1px solid var(--compound-soft); }
-.comp-medium { color: #000; background: var(--compound-medium); border: 1px solid var(--compound-medium); }
-.comp-hard { color: #000; background: #ffffff; border: 1px solid #ffffff; }
-.comp-inter { color: #fff; background: var(--compound-inter); border: 1px solid var(--compound-inter); }
-.comp-wet { color: #fff; background: var(--compound-wet); border: 1px solid var(--compound-wet); }
+.comp-soft { color: #fff; background: var(--compound-soft); border: 1px solid #f87171; box-shadow: 0 0 6px rgba(239, 68, 68, 0.35); }
+.comp-medium { color: #000; background: var(--compound-medium); border: 1px solid #fde047; box-shadow: 0 0 6px rgba(234, 179, 8, 0.3); }
+.comp-hard { color: #000; background: #ffffff; border: 1px solid #ffffff; box-shadow: 0 0 6px rgba(255, 255, 255, 0.35); }
+.comp-inter { color: #fff; background: var(--compound-inter); border: 1px solid #34d399; }
+.comp-wet { color: #fff; background: var(--compound-wet); border: 1px solid #60a5fa; }
 
 .pit-tag {
-  background: #14141e;
+  background: rgba(20, 20, 32, 0.9);
   color: #bbbbdd;
-  border: 1px solid #28283c;
-  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  padding: 1px 5px;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
   display: inline-block;
 }
 
 .pit-tag-boxing {
-  background: rgba(239, 68, 68, 0.25) !important;
-  color: #ff6b6b !important;
+  background: rgba(239, 68, 68, 0.28) !important;
+  color: #ff8080 !important;
   border-color: var(--color-red) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
   animation: pulse 0.8s infinite alternate;
 }
 
 /* 2026 FIA Regulations: Manual Override Mode (Overtake Boost) replacing DRS */
 .ot-tag {
   font-size: 8px;
-  font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 2px !important;
+  font-weight: 900;
+  padding: 2px 4px;
+  border-radius: 3px;
   text-align: center;
   display: inline-block;
   letter-spacing: 0.5px;
@@ -104,12 +122,13 @@
 .ot-active {
   background: var(--color-green);
   color: #000;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
   animation: pulse 0.8s infinite alternate;
 }
 .ot-inactive {
-  background: #111116;
+  background: rgba(255, 255, 255, 0.03);
   color: #444455;
-  border: 1px solid #22222d;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Backward-compatible alias */
@@ -121,18 +140,20 @@
 .sim-row-pill {
   background: var(--color-purple);
   color: #000000;
-  font-weight: 800;
-  font-size: 8px;
-  padding: 1px 4px;
-  border-radius: 2px !important;
+  font-weight: 900;
+  font-size: 7px;
+  padding: 1px 3px;
+  border-radius: 2px;
   margin-left: 3px;
+  letter-spacing: 0.5px;
 }
 
 .sim-row-active {
-  background-color: rgba(6, 182, 212, 0.15) !important;
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.03) 100%) !important;
   border-left: 3px solid var(--color-cyan) !important;
+  box-shadow: inset 0 0 12px rgba(6, 182, 212, 0.1);
 }
 
-.pos-gain { color: var(--color-green); font-weight: 700; }
-.pos-loss { color: var(--color-red); font-weight: 700; }
+.pos-gain { color: var(--color-green); font-weight: 800; }
+.pos-loss { color: var(--color-red); font-weight: 800; }
 .pos-same { color: var(--text-muted); }

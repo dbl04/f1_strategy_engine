@@ -357,7 +357,23 @@ function applyDVRState(timestamp) {
     });
   });
 
-  // Sort and rank all 22 drivers by track distance
+  // Inject Simulated Driver trajectory state into active field before ranking
+  if (simOverlayState.isActive) {
+    const coords = getCoordsForProgress(simOverlayState.simulatedProgress);
+    activeLapsByDriver.set(simOverlayState.driverNumber, {
+      lap_number: simOverlayState.currentLap,
+      progress: simOverlayState.simulatedProgress,
+      targetX: coords.x,
+      targetY: coords.y,
+      compound: simOverlayState.currentCompound,
+      tyre_age: simOverlayState.tyreAge,
+      pit_stop_count: simOverlayState.pitStopCount,
+      last_lap_time: simOverlayState.lastLapTime || 88.2,
+      isSim: true
+    });
+  }
+
+  // Sort and rank all 22 drivers by track distance: (lap * 1.0) + progress
   const sorted = Array.from(activeLapsByDriver.entries()).map(([dNo, data]) => {
     const totalScore = (data.lap_number * 1.0) + data.progress;
     return { dNo, totalScore, ...data };
@@ -380,21 +396,35 @@ function applyDVRState(timestamp) {
     driverState.position = rank + 1;
     driverState.gap = rank === 0 ? "LEADER" : `+${gapSec.toFixed(1)}s`;
     driverState.interval = rank === 0 ? "―" : `+${intSec.toFixed(1)}s`;
-    driverState.compound = item.compound;
-    driverState.tyre_age = item.tyre_age;
-    driverState.pit_stop_count = item.pit_stop_count;
     driverState.drs_active = isOvertakeEligible; // 2026 Overtake mode
-    driverState.last_lap_time = item.last_lap_time;
-    driverState.current_lap = item.lap_number;
-    driverState.targetX = item.targetX;
-    driverState.targetY = item.targetY;
-    driverState.progress = item.progress;
+
+    if (simOverlayState.isActive && item.dNo === simOverlayState.driverNumber) {
+      driverState.compound = simOverlayState.currentCompound;
+      driverState.tyre_age = simOverlayState.tyreAge;
+      driverState.pit_stop_count = simOverlayState.pitStopCount;
+      driverState.current_lap = simOverlayState.currentLap;
+      driverState.progress = simOverlayState.simulatedProgress;
+      driverState.isSimRow = true;
+      driverState.isPitLap = (simOverlayState.status !== "RACING" || simOverlayState.pitRequested);
+      // Simulated driver coordinates are handled directly by the simulation physics engine
+    } else {
+      driverState.compound = item.compound;
+      driverState.tyre_age = item.tyre_age;
+      driverState.pit_stop_count = item.pit_stop_count;
+      driverState.current_lap = item.lap_number;
+      driverState.progress = item.progress;
+      driverState.targetX = item.targetX;
+      driverState.targetY = item.targetY;
+      driverState.last_lap_time = item.last_lap_time;
+      driverState.isSimRow = false;
+      driverState.isPitLap = false;
+    }
   });
 
   // Sync Header Bar
   const lapCounter = document.getElementById('headerLapCounter');
   if (lapCounter) {
-    lapCounter.innerText = `${leaderLapNumber} / 53`;
+    lapCounter.innerText = `${leaderLapNumber} / ${simOverlayState.totalLaps || 53}`;
   }
 
   const scrubber = document.getElementById('dvrScrubber');

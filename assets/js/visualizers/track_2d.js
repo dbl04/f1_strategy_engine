@@ -175,7 +175,9 @@ class OpenF1RadarEngine {
     // Track halo & surface
     if (this.cachedPath2D) {
       // Broad glowing underlay
-      ctx.strokeStyle = '#12121e';
+      ctx.strokeStyle = (currentTrackStatus === 'SafetyCar' || currentTrackStatus === 'VirtualSafetyCar') 
+        ? 'rgba(234, 179, 8, 0.25)' 
+        : (currentTrackStatus === 'RedFlag' ? 'rgba(239, 68, 68, 0.25)' : '#12121e');
       ctx.lineWidth = 14;
       ctx.stroke(this.cachedPath2D);
 
@@ -185,7 +187,7 @@ class OpenF1RadarEngine {
       ctx.stroke(this.cachedPath2D);
 
       // Racing line core
-      ctx.strokeStyle = '#606080';
+      ctx.strokeStyle = (currentTrackStatus === 'SafetyCar' || currentTrackStatus === 'VirtualSafetyCar') ? '#eab308' : '#606080';
       ctx.lineWidth = 1.5;
       ctx.stroke(this.cachedPath2D);
 
@@ -225,6 +227,19 @@ class OpenF1RadarEngine {
       }
     }
 
+    // High-visibility Safety Car & VSC Flag Watermark on Canvas
+    if (currentTrackStatus === 'SafetyCar' || currentTrackStatus === 'VirtualSafetyCar') {
+      const now = Date.now();
+      const alpha = 0.6 + Math.sin(now / 200) * 0.3;
+      ctx.fillStyle = `rgba(234, 179, 8, ${alpha})`;
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText(currentTrackStatus === 'SafetyCar' ? '⚠️ SAFETY CAR' : '🟡 VSC DELTA', 16, 26);
+    } else if (currentTrackStatus === 'RedFlag') {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText('🔴 RED FLAG', 16, 26);
+    }
+
     const padding = Math.min(this.canvas.width, this.canvas.height) * 0.05;
     const usableSize = Math.min(this.canvas.width, this.canvas.height) - (padding * 2);
     const offsetX = (this.canvas.width - usableSize) / 2;
@@ -258,26 +273,28 @@ class OpenF1RadarEngine {
           ctx.fillText(`${driver.tla || getDriverTla(driver)} (LIVE)`, px + 8, py - 6);
         }
 
-        // Map simulated progress to track coordinates
-        const simNorm = getCoordsForProgress(simOverlayState.simulatedProgress);
-        const simProj = project(simNorm.x, simNorm.y, this.canvas.width, this.canvas.height);
-        const drawPx = simProj.cx;
-        const drawPy = simProj.cy;
+        // Draw simulated car using driver's physical coordinates (with pit lane offset)
+        const drawPx = px;
+        const drawPy = py;
 
         this.screenPositions.push({ x: drawPx, y: drawPy, driver });
 
-        // Glowing cyan halo for simulated car
+        // Glowing halo for simulated car
         const now = Date.now();
         const pulseR = 14 + Math.sin(now / 150) * 4;
         ctx.beginPath();
         ctx.arc(drawPx, drawPy, pulseR, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.65)';
+        ctx.strokeStyle = (simOverlayState.status === "IN_PIT_BOX") 
+          ? 'rgba(239, 68, 68, 0.85)' 
+          : 'rgba(6, 182, 212, 0.65)';
         ctx.lineWidth = 2;
         ctx.stroke();
 
         ctx.beginPath();
         ctx.arc(drawPx, drawPy, 10, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(6, 182, 212, 0.35)';
+        ctx.fillStyle = (simOverlayState.status === "IN_PIT_BOX") 
+          ? 'rgba(239, 68, 68, 0.35)' 
+          : 'rgba(6, 182, 212, 0.35)';
         ctx.fill();
 
         // Outer dot with team color
@@ -292,21 +309,41 @@ class OpenF1RadarEngine {
         ctx.fillStyle = '#ffffff';
         ctx.fill();
 
-        // Acronym SIM Pill Badge
+        // Status Badge Pill
         const badgeX = drawPx + 8;
         const badgeY = drawPy - 7;
-        const isPitStop = simOverlayState.isCurrentlyBoxing || (simOverlayState.timeline.length > 0 && simOverlayState.timeline[simOverlayState.activeTimelineIndex] && simOverlayState.timeline[simOverlayState.activeTimelineIndex].is_pit_lap);
 
-        if (isPitStop) {
-          ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
-          ctx.fillRect(badgeX, badgeY, 68, 12);
+        if (simOverlayState.status === "IN_PIT_BOX") {
+          const rem = Math.max(0, simOverlayState.pitStopSecondsRemaining).toFixed(1);
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+          ctx.fillRect(badgeX, badgeY, 78, 12);
           ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(badgeX, badgeY, 78, 12);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 8px JetBrains Mono';
+          ctx.fillText(`🚨 BOXING ${rem}s`, badgeX + 3, badgeY + 9);
+        } else if (simOverlayState.status === "ENTERING_PITS") {
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.9)';
+          ctx.fillRect(badgeX, badgeY, 68, 12);
+          ctx.strokeStyle = '#f59e0b';
           ctx.lineWidth = 1;
           ctx.strokeRect(badgeX, badgeY, 68, 12);
 
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 8px JetBrains Mono';
-          ctx.fillText(`BOXING 2.4s`, badgeX + 3, badgeY + 9);
+          ctx.fillText(`PIT LIMITER`, badgeX + 3, badgeY + 9);
+        } else if (simOverlayState.status === "EXITING_PITS") {
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
+          ctx.fillRect(badgeX, badgeY, 52, 12);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(badgeX, badgeY, 52, 12);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 8px JetBrains Mono';
+          ctx.fillText(`PIT EXIT`, badgeX + 3, badgeY + 9);
         } else {
           ctx.fillStyle = '#061a24';
           ctx.fillRect(badgeX, badgeY, 44, 12);

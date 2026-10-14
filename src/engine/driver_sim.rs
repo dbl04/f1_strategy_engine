@@ -132,19 +132,34 @@ pub fn get_driver_metadata(driver_number: u32) -> (&'static str, &'static str, u
     }
 }
 
+/// Returns (total_laps, base_lap_time, pit_loss_seconds, baseline_odi) for a circuit identifier.
+pub fn get_track_circuit_data(track_id: Option<&str>) -> (u32, f64, f64, f64) {
+    match track_id.map(|s| s.to_lowercase()).as_deref() {
+        Some(t) if t.contains("monaco") || t.contains("monte carlo") => (78, 74.5, 24.5, 0.78),
+        Some(t) if t.contains("spa") || t.contains("francorchamps") => (44, 105.0, 21.0, 0.22),
+        Some(t) if t.contains("silverstone") => (52, 87.5, 22.0, 0.32),
+        Some(t) if t.contains("austria") || t.contains("spielberg") || t.contains("red bull") => (71, 65.5, 20.5, 0.35),
+        Some(t) if t.contains("interlagos") || t.contains("sao paulo") || t.contains("brazil") => (71, 70.5, 21.5, 0.30),
+        Some(t) if t.contains("suzuka") || t.contains("japan") => (53, 91.0, 22.5, 0.45),
+        Some(t) if t.contains("bahrain") || t.contains("sakhir") => (57, 92.0, 23.0, 0.25),
+        Some(t) if t.contains("albert park") || t.contains("melbourne") => (58, 80.0, 21.5, 0.40),
+        Some(t) if t.contains("zandvoort") || t.contains("netherlands") => (72, 72.0, 21.0, 0.55),
+        Some(t) if t.contains("hungaroring") || t.contains("budapest") => (70, 78.0, 21.5, 0.65),
+        _ => (53, 82.5, 22.5, 0.28), // Monza default
+    }
+}
+
 /// Executes interactive single-driver strategy hypothesis simulation.
 pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulationResponse {
     let (tla, team, _teammate_no, teammate_tla) = get_driver_metadata(req.driver_number);
-    let total_laps = 53u32;
-    let base_lap_time = 82.5; // reference Monza pace
-    let pit_loss = 22.5;
+    let (total_laps, base_lap_time, pit_loss, track_baseline_odi) = get_track_circuit_data(req.track_id.as_deref());
     let current_lap = req.current_lap.max(1).min(total_laps);
     let pit_lap = req.pit_lap.max(current_lap).min(total_laps);
     let is_box_this_lap = pit_lap == current_lap;
 
     // 1. Calculate blended pace with teammate benchmark (70% driver / 30% teammate)
-    let driver_sample = vec![82.35, 82.42, 82.28, 82.50, 82.38];
-    let teammate_sample = vec![82.60, 82.52, 82.71, 82.55, 82.68];
+    let driver_sample = vec![base_lap_time - 0.15, base_lap_time - 0.08, base_lap_time - 0.22, base_lap_time, base_lap_time - 0.12];
+    let teammate_sample = vec![base_lap_time + 0.10, base_lap_time + 0.02, base_lap_time + 0.21, base_lap_time + 0.05, base_lap_time + 0.18];
     let pace_res = estimate_blended_pace(&driver_sample, &teammate_sample, base_lap_time);
     let base_pace = pace_res.blended_pace_seconds;
 
@@ -185,8 +200,7 @@ pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulati
         ego_remaining_time += base_pace + compound_delta + deg;
     }
 
-    // 5. Competitor field projection
-    // Define representative benchmark competitors
+    // 5. Full 22-car competitor grid projection
     struct Competitor {
         tla: &'static str,
         initial_pos: u32,
@@ -196,12 +210,28 @@ pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulati
     }
 
     let competitors = vec![
-        Competitor { tla: "NOR", initial_pos: 1, initial_gap: 0.0, pit_lap: 22, deg_rate: 0.06 },
+        Competitor { tla: "NOR", initial_pos: 1, initial_gap: 0.0, pit_lap: 22, deg_rate: 0.060 },
         Competitor { tla: "VER", initial_pos: 2, initial_gap: 2.1, pit_lap: 24, deg_rate: 0.062 },
         Competitor { tla: "PIA", initial_pos: 3, initial_gap: 4.8, pit_lap: 26, deg_rate: 0.058 },
         Competitor { tla: "LEC", initial_pos: 4, initial_gap: 7.2, pit_lap: 21, deg_rate: 0.065 },
         Competitor { tla: "HAM", initial_pos: 5, initial_gap: 9.8, pit_lap: 27, deg_rate: 0.063 },
         Competitor { tla: "RUS", initial_pos: 6, initial_gap: 13.5, pit_lap: 25, deg_rate: 0.064 },
+        Competitor { tla: "ANT", initial_pos: 7, initial_gap: 16.2, pit_lap: 23, deg_rate: 0.065 },
+        Competitor { tla: "ALO", initial_pos: 8, initial_gap: 19.5, pit_lap: 28, deg_rate: 0.062 },
+        Competitor { tla: "STR", initial_pos: 9, initial_gap: 23.0, pit_lap: 22, deg_rate: 0.068 },
+        Competitor { tla: "HAD", initial_pos: 10, initial_gap: 26.5, pit_lap: 24, deg_rate: 0.066 },
+        Competitor { tla: "GAS", initial_pos: 11, initial_gap: 29.8, pit_lap: 25, deg_rate: 0.067 },
+        Competitor { tla: "COL", initial_pos: 12, initial_gap: 33.2, pit_lap: 29, deg_rate: 0.065 },
+        Competitor { tla: "ALB", initial_pos: 13, initial_gap: 36.5, pit_lap: 23, deg_rate: 0.066 },
+        Competitor { tla: "SAI", initial_pos: 14, initial_gap: 39.8, pit_lap: 27, deg_rate: 0.064 },
+        Competitor { tla: "LAW", initial_pos: 15, initial_gap: 43.1, pit_lap: 26, deg_rate: 0.068 },
+        Competitor { tla: "LIN", initial_pos: 16, initial_gap: 46.5, pit_lap: 24, deg_rate: 0.069 },
+        Competitor { tla: "OCO", initial_pos: 17, initial_gap: 50.0, pit_lap: 25, deg_rate: 0.070 },
+        Competitor { tla: "BEA", initial_pos: 18, initial_gap: 53.5, pit_lap: 22, deg_rate: 0.072 },
+        Competitor { tla: "BOR", initial_pos: 19, initial_gap: 57.0, pit_lap: 26, deg_rate: 0.071 },
+        Competitor { tla: "HUL", initial_pos: 20, initial_gap: 60.5, pit_lap: 28, deg_rate: 0.069 },
+        Competitor { tla: "PER", initial_pos: 21, initial_gap: 64.0, pit_lap: 25, deg_rate: 0.072 },
+        Competitor { tla: "BOT", initial_pos: 22, initial_gap: 68.0, pit_lap: 27, deg_rate: 0.073 },
     ];
 
     let current_position = competitors
@@ -288,7 +318,7 @@ pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulati
     let is_drs = min_gap_ahead < 1.0;
     let dirty_air_laps = if is_drs { 3 } else { 0 };
     let odi_res = calculate_dynamic_odi(
-        0.28, // Monza track baseline
+        track_baseline_odi,
         pit_lap,
         total_laps,
         dirty_air_laps,
@@ -465,7 +495,7 @@ pub fn simulate_driver_strategy(req: &DriverSimulationRequest) -> DriverSimulati
         };
 
         let odi = calculate_dynamic_odi(
-            0.28,
+            track_baseline_odi,
             l,
             total_laps,
             if interval < 1.0 { 2 } else { 0 },

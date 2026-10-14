@@ -1,43 +1,45 @@
 :root {
-  --bg-black: #000000;
-  --bg-panel: #050505;
-  --bg-surface: #0a0a0c;
-  --border-dark: #1f1f26;
-  --border-light: #33333f;
+  --bg-black: #060609;
+  --bg-panel: #0a0a10;
+  --bg-surface: #10101a;
+  --bg-card: rgba(18, 18, 30, 0.75);
+  --border-dark: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.16);
+  --border-accent: rgba(168, 85, 247, 0.4);
 
-  --text-main: #ffffff;
-  --text-muted: #888899;
+  --text-main: #f3f4f6;
+  --text-muted: #8c8ca1;
+  --text-dim: #5c5c72;
   
   --color-purple: #a855f7;
-  --color-green: #22c55e;
-  --color-yellow: #eab308;
+  --color-purple-glow: rgba(168, 85, 247, 0.25);
+  --color-green: #10b981;
+  --color-yellow: #f59e0b;
   --color-red: #ef4444;
   --color-cyan: #06b6d4;
 
   --compound-soft: #ef4444;
   --compound-medium: #eab308;
   --compound-hard: #ffffff;
-  --compound-inter: #22c55e;
+  --compound-inter: #10b981;
   --compound-wet: #3b82f6;
 
   --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  border-radius: 0 !important;
-  text-shadow: none !important;
-  box-shadow: none !important;
 }
 
 body {
   background-color: var(--bg-black);
   color: var(--text-main);
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1.35;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -57,12 +59,23 @@ body {
   display: none !important;
 }
 
-/* Common Animations */
+/* Animations */
 @keyframes pulse {
-  from { opacity: 0.6; }
-  to { opacity: 1.0; }
+  0% { opacity: 0.6; }
+  100% { opacity: 1.0; }
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes flash-hazard {
+  0%, 100% { background-color: rgba(234, 179, 8, 0.2); }
+  50% { background-color: rgba(234, 179, 8, 0.45); }
+}
+
+@keyframes pulse-beacon {
+  0% { transform: scale(0.95); box-shadow: 0 0 4px var(--color-purple); }
+  50% { transform: scale(1.15); box-shadow: 0 0 14px var(--color-purple); }
+  100% { transform: scale(0.95); box-shadow: 0 0 4px var(--color-purple); }
 }

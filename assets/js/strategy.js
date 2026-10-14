@@ -1,8 +1,11 @@
 // ==========================================
-// 5. STRATEGY ENGINE & SIMULATION CONTROLLER
+// 5. STRATEGY ENGINE & PIT WALL SIMULATION CONTROLLER
 // ==========================================
 
-// Phase 6: Simulated Trajectory Overlay State
+let selectedTargetCompound = "Hard";
+let currentTrackStatus = "Green"; // "Green" | "SafetyCar" | "VirtualSafetyCar" | "RedFlag"
+
+// Simulated Trajectory Overlay State & Vehicle Dynamics Engine
 const simOverlayState = {
   isActive: false,
   driverNumber: 1,
@@ -10,16 +13,26 @@ const simOverlayState = {
   ghostMode: true,
   isPlaying: true,
   playbackSpeed: 1,
-  simulatedProgress: 0.0,
-  activeTimelineIndex: 0,
-  timeline: [],
-  totalLaps: 53,
+
+  // Real Physics & Pit Stop State Machine
+  status: "RACING", // "RACING" | "ENTERING_PITS" | "IN_PIT_BOX" | "EXITING_PITS"
+  pitRequested: false, // Flag to execute pit stop on this lap
   currentLap: 20,
-  pitLap: 22,
   newCompound: "Hard",
+  currentCompound: "Medium",
+  tyreAge: 15,
+  pitStopCount: 0,
+  simulatedProgress: 0.0,
+  baseLapTime: 82.5,
+  lastLapTime: 82.5,
+  pitStopSecondsRemaining: 2.4,
+  stationaryDuration: 2.4,
+  isCurrentlyBoxing: false,
+
+  // UI & Projections
   projectedFinishPos: 2,
   posDelta: 1,
-  isCurrentlyBoxing: false
+  totalLaps: 53
 };
 
 function normalizeCompound(c) {
@@ -32,50 +45,370 @@ function normalizeCompound(c) {
   return "Medium";
 }
 
-async function triggerBoxThisLap() {
-  const driverObj = lerpDriversMap.get(followedDriverNo);
-  const curLap = (driverObj && driverObj.current_lap) 
-    ? driverObj.current_lap 
-    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
+// Select compound via tactile pill buttons in the UI
+function selectTargetCompound(comp) {
+  selectedTargetCompound = normalizeCompound(comp);
+  
+  // Update active pill button UI
+  document.querySelectorAll('.comp-pill').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const activeBtn = document.querySelector(`.pill-${selectedTargetCompound.toLowerCase()}`);
+  if (activeBtn) activeBtn.classList.add('active');
 
-  const pitRange = document.getElementById('userPitLapRange');
-  const pitDisp = document.getElementById('userPitLapDisplay');
-  const pitInp = document.getElementById('userPitLapInput');
-  if (pitRange && pitDisp && pitInp) {
-    pitRange.value = curLap;
-    pitInp.value = curLap;
-    pitDisp.innerText = `L${curLap} (BOX NOW)`;
+  // Update button subtitle description
+  const sub = document.getElementById('btnBoxSubtitle');
+  if (sub) {
+    if (simOverlayState.pitRequested) {
+      sub.innerText = `CONFIRMED: PITTING FOR ${selectedTargetCompound.toUpperCase()} TYRES`;
+    } else {
+      sub.innerText = `FIT NEW ${selectedTargetCompound.toUpperCase()} TYRES • SWITCH TO SIMULATION`;
+    }
   }
 
-  simOverlayState.isCurrentlyBoxing = true;
-  simOverlayState.pitLap = curLap;
-
-  // Immediately reflect pit entry in timing tower
-  if (driverObj) {
-    driverObj.isPitLap = true;
-    driverObj.pit_stop_count = (driverObj.pit_stop_count || 0) + 1;
-    renderTimingTowerTable();
+  if (simOverlayState.isActive) {
+    simOverlayState.newCompound = selectedTargetCompound;
   }
-
-  await runSingleDriverSimulation(true);
 }
 
-async function runSingleDriverSimulation(isBoxNow = false) {
+// Inward geometric offset for cars traveling through the pit lane
+function getPitLaneCoords(progress, coords) {
+  const cx = 0.5;
+  const cy = 0.5;
+  const dx = cx - coords.x;
+  const dy = cy - coords.y;
+  const dist = Math.hypot(dx, dy) || 1.0;
+  return {
+    x: coords.x + (dx / dist) * 0.025,
+    y: coords.y + (dy / dist) * 0.025
+  };
+}
+
+// Bulletproof, instant Pit Stop Trigger (Local execution with zero network dependency)
+function triggerBoxThisLap() {
+  const driverObj = lerpDriversMap.get(followedDriverNo) || Array.from(lerpDriversMap.values())[0];
+  if (!driverObj) return;
+
+  const curLap = driverObj.current_lap || 1;
+  const curProg = driverObj.progress !== undefined ? driverObj.progress : 0.5;
+
+  // 1. If not yet in simulation mode, branch driver off into digital twin immediately
+  if (!simOverlayState.isActive || simOverlayState.driverNumber !== followedDriverNo) {
+    simOverlayState.isActive = true;
+    simOverlayState.driverNumber = followedDriverNo;
+    simOverlayState.driverTla = driverObj.tla || getDriverTla(driverObj);
+    simOverlayState.currentLap = curLap;
+    simOverlayState.simulatedProgress = curProg;
+    simOverlayState.currentCompound = driverObj.compound || "Medium";
+    simOverlayState.tyreAge = driverObj.tyre_age || 0;
+    simOverlayState.pitStopCount = driverObj.pit_stop_count || 0;
+  }
+
+  // 2. Schedule pit stop for this lap to the user's chosen compound
+  simOverlayState.newCompound = selectedTargetCompound;
+  simOverlayState.pitRequested = true;
+  simOverlayState.isCurrentlyBoxing = true;
+  simOverlayState.pitStopSecondsRemaining = 2.4;
+
+  // If car is already within pit entrance zone, transition directly into pits
+  if (simOverlayState.simulatedProgress >= 0.88 && simOverlayState.simulatedProgress < 0.94) {
+    simOverlayState.status = "ENTERING_PITS";
+  }
+
+  // 3. Update UI buttons and banners immediately
+  const btnTitle = document.getElementById('btnBoxTitle');
+  const btnSub = document.getElementById('btnBoxSubtitle');
+  const btnBox = document.getElementById('btnBoxThisLap');
+  const btnReset = document.getElementById('btnResetToLive');
+
+  if (btnTitle) btnTitle.innerText = "🚨 BOX CONFIRMED";
+  if (btnSub) btnSub.innerText = `PITTING THIS LAP ➔ ${selectedTargetCompound.toUpperCase()}`;
+  if (btnBox) btnBox.classList.add('box-confirmed');
+  if (btnReset) btnReset.classList.remove('hidden');
+
+  const modeTag = document.getElementById('simModeTag');
+  if (modeTag) {
+    modeTag.className = "telemetry-mode-tag mode-sim";
+    modeTag.innerText = "🟣 SIMULATED DIGITAL TWIN";
+  }
+
+  // Show Sim Banner above visualizer
+  const banner = document.getElementById('simModeBanner');
+  if (banner) banner.classList.remove('hidden');
+  const dEl = document.getElementById('simBannerDriver');
+  if (dEl) dEl.innerText = `#${simOverlayState.driverNumber} ${simOverlayState.driverTla}`;
+  const pEl = document.getElementById('simBannerPlan');
+  if (pEl) pEl.innerText = `(🚨 BOX THIS LAP ➔ ${selectedTargetCompound.toUpperCase()})`;
+
+  // Immediately reflect pit flag in timing tower
+  driverObj.isPitLap = true;
+  renderTimingTowerTable();
+
+  // 4. Asynchronously update strategy projections in background without blocking
+  runSingleDriverSimulation(false, true);
+}
+
+// 60 FPS Vehicle Dynamics & Pit Stop Physical Simulator
+function tickSimulatedDriver(deltaTime) {
+  if (!simOverlayState.isActive || !simOverlayState.isPlaying) return;
+
+  const dt = deltaTime * simOverlayState.playbackSpeed;
+  if (dt <= 0) return;
+
+  // 1. Neutralization & Pace Modifiers
+  let speedModifier = 1.0;
+  if (currentTrackStatus === "SafetyCar") {
+    speedModifier = 0.60; // 40% reduction under SC delta pace
+  } else if (currentTrackStatus === "VirtualSafetyCar") {
+    speedModifier = 0.70; // 30% reduction under VSC delta pace
+  } else if (currentTrackStatus === "RedFlag") {
+    speedModifier = 0.0;  // Full race halt
+  }
+
+  // 2. Compound Pace Delta & Tyre Degradation
+  let compoundDelta = 0.0;
+  let degRate = 0.06;
+  const comp = normalizeCompound(simOverlayState.currentCompound);
+  if (comp === "Soft") {
+    compoundDelta = -0.65;
+    degRate = 0.11;
+  } else if (comp === "Medium") {
+    compoundDelta = 0.0;
+    degRate = 0.06;
+  } else if (comp === "Hard") {
+    compoundDelta = 0.70;
+    degRate = 0.035;
+  } else if (comp === "Intermediate") {
+    compoundDelta = 3.5;
+    degRate = 0.08;
+  } else if (comp === "Wet") {
+    compoundDelta = 7.0;
+    degRate = 0.08;
+  }
+
+  const effectiveLapTime = Math.max(60.0, (simOverlayState.baseLapTime + compoundDelta + (simOverlayState.tyreAge * degRate)) / (speedModifier > 0.01 ? speedModifier : 1.0));
+  simOverlayState.lastLapTime = effectiveLapTime;
+
+  // Normalized track progress rate per second (1.0 = full lap)
+  const baseRate = (speedModifier > 0.01) ? (1.0 / effectiveLapTime) : 0.0;
+
+  // 3. Physical Pit Stop Execution State Machine
+  if (simOverlayState.pitRequested) {
+    // A) Pit Entry Lane (approaching straight: ~0.88 to 0.93)
+    if (simOverlayState.simulatedProgress >= 0.88 && simOverlayState.simulatedProgress < 0.93) {
+      simOverlayState.status = "ENTERING_PITS";
+      simOverlayState.simulatedProgress += baseRate * 0.25 * dt; // Pit lane speed limiter (80 km/h)
+    }
+    // B) Pit Box Area (~0.93 to 0.96)
+    else if (simOverlayState.simulatedProgress >= 0.93 && simOverlayState.simulatedProgress < 0.96) {
+      if (simOverlayState.pitStopSecondsRemaining > 0) {
+        simOverlayState.status = "IN_PIT_BOX";
+        // Stationary vehicle halt for tyre change
+        simOverlayState.pitStopSecondsRemaining -= dt;
+
+        if (simOverlayState.pitStopSecondsRemaining <= 0) {
+          // Tyre swap complete!
+          simOverlayState.currentCompound = simOverlayState.newCompound;
+          simOverlayState.tyreAge = 0;
+          simOverlayState.pitStopCount++;
+          simOverlayState.pitRequested = false;
+          simOverlayState.isCurrentlyBoxing = false;
+          simOverlayState.status = "EXITING_PITS";
+          simOverlayState.simulatedProgress = 0.961;
+
+          // Reset Box Button back to ready state for subsequent pit stops!
+          const btnTitle = document.getElementById('btnBoxTitle');
+          const btnSub = document.getElementById('btnBoxSubtitle');
+          const btnBox = document.getElementById('btnBoxThisLap');
+          if (btnTitle) btnTitle.innerText = "🚨 BOX THIS LAP";
+          if (btnSub) btnSub.innerText = `FIT NEW ${selectedTargetCompound.toUpperCase()} TYRES • SWITCH TO SIMULATION`;
+          if (btnBox) btnBox.classList.remove('box-confirmed');
+
+          // Update Hero Card in right panel
+          const heroTyre = document.getElementById('heroTyreBadge');
+          const heroAge = document.getElementById('heroTyreAge');
+          const heroPits = document.getElementById('heroPitCount');
+          const compInfo = getCompoundInfo(simOverlayState.currentCompound);
+          if (heroTyre) {
+            heroTyre.innerText = compInfo.tag;
+            heroTyre.className = `compound-tag ${compInfo.cssClass}`;
+          }
+          if (heroAge) heroAge.innerText = "L0";
+          if (heroPits) heroPits.innerText = `${simOverlayState.pitStopCount} PITS`;
+
+          renderTimingTowerTable();
+        }
+      } else {
+        simOverlayState.status = "EXITING_PITS";
+        simOverlayState.simulatedProgress += baseRate * 0.35 * dt;
+      }
+    }
+    // C) Pit Exit Lane (> 0.96 or initial straight < 0.06)
+    else if (simOverlayState.simulatedProgress >= 0.96 || simOverlayState.simulatedProgress < 0.06) {
+      simOverlayState.status = "EXITING_PITS";
+      simOverlayState.simulatedProgress += baseRate * 0.35 * dt;
+    }
+    // D) Prior to pit entrance on this lap (progress < 0.88)
+    else {
+      simOverlayState.status = "RACING";
+      simOverlayState.simulatedProgress += baseRate * dt;
+    }
+  } else {
+    // Normal Racing or rejoining after pit exit
+    if (simOverlayState.status === "EXITING_PITS") {
+      if (simOverlayState.simulatedProgress >= 0.06 && simOverlayState.simulatedProgress < 0.88) {
+        simOverlayState.status = "RACING";
+      } else {
+        simOverlayState.simulatedProgress += baseRate * 0.35 * dt;
+      }
+    } else {
+      simOverlayState.status = "RACING";
+      simOverlayState.simulatedProgress += baseRate * dt;
+    }
+  }
+
+  // 4. Lap Rollover (crossing Start/Finish line)
+  if (simOverlayState.simulatedProgress >= 1.0) {
+    simOverlayState.simulatedProgress %= 1.0;
+    simOverlayState.currentLap++;
+    simOverlayState.tyreAge++;
+
+    // Update Hero Card tyre age
+    const heroAge = document.getElementById('heroTyreAge');
+    if (heroAge) heroAge.innerText = `L${simOverlayState.tyreAge}`;
+  }
+
+  // 5. Update Simulated Driver in lerpDriversMap with realistic coordinates
+  const driverState = lerpDriversMap.get(simOverlayState.driverNumber);
+  if (driverState) {
+    let coords = getCoordsForProgress(simOverlayState.simulatedProgress);
+    if (simOverlayState.status !== "RACING") {
+      coords = getPitLaneCoords(simOverlayState.simulatedProgress, coords);
+    }
+
+    driverState.currentX = coords.x;
+    driverState.currentY = coords.y;
+    driverState.targetX = coords.x;
+    driverState.targetY = coords.y;
+    driverState.progress = simOverlayState.simulatedProgress;
+    driverState.current_lap = simOverlayState.currentLap;
+    driverState.compound = simOverlayState.currentCompound;
+    driverState.tyre_age = simOverlayState.tyreAge;
+    driverState.pit_stop_count = simOverlayState.pitStopCount;
+    driverState.isPitLap = (simOverlayState.status !== "RACING" || simOverlayState.pitRequested);
+    driverState.isSimRow = true;
+  }
+}
+
+// Reset simulation mode and return driver cleanly to live OpenF1 API stream
+function exitSimulationMode() {
+  simOverlayState.isActive = false;
+  simOverlayState.pitRequested = false;
+  simOverlayState.isCurrentlyBoxing = false;
+  simOverlayState.status = "RACING";
+
+  // Re-sync followed driver with pure DVR state
+  if (dvrState.currentTimestamp !== undefined) {
+    applyDVRState(dvrState.currentTimestamp);
+  }
+
+  const btnTitle = document.getElementById('btnBoxTitle');
+  const btnSub = document.getElementById('btnBoxSubtitle');
+  const btnBox = document.getElementById('btnBoxThisLap');
+  const btnReset = document.getElementById('btnResetToLive');
+
+  if (btnTitle) btnTitle.innerText = "🚨 BOX THIS LAP";
+  if (btnSub) btnSub.innerText = `FIT NEW ${selectedTargetCompound.toUpperCase()} TYRES • SWITCH TO SIMULATION`;
+  if (btnBox) btnBox.classList.remove('box-confirmed');
+  if (btnReset) btnReset.classList.add('hidden');
+
+  const modeTag = document.getElementById('simModeTag');
+  if (modeTag) {
+    modeTag.className = "telemetry-mode-tag mode-live";
+    modeTag.innerText = "● LIVE OPENF1";
+  }
+
+  const banner = document.getElementById('simModeBanner');
+  if (banner) banner.classList.add('hidden');
+
+  renderTimingTowerTable();
+}
+
+// Race Control Status Toggle & Live Alert Feedback (GREEN / VSC / SAFETY CAR / RED FLAG)
+function setTrackStatus(status) {
+  currentTrackStatus = status;
+
+  // 1. Update Header Status Badge
+  const badge = document.getElementById('statusBadge');
+  if (badge) {
+    badge.innerText = `TRACK STATUS: ${status.toUpperCase()}`;
+    badge.className = 'status-badge ' + (
+      status === 'Green' ? 'status-green' :
+      status === 'Yellow' ? 'status-vsc' :
+      status === 'VirtualSafetyCar' ? 'status-vsc' :
+      status === 'SafetyCar' ? 'status-sc' : 'status-red'
+    );
+  }
+
+  // 2. Update Race Control Alert Banner above visualizer
+  const alertBanner = document.getElementById('safetyCarAlertBanner');
+  const alertTitle = document.getElementById('scAlertTitle');
+  const alertDesc = document.getElementById('scAlertDesc');
+
+  if (alertBanner && alertTitle && alertDesc) {
+    if (status === 'SafetyCar') {
+      alertBanner.className = 'race-control-alert sc-active';
+      alertBanner.classList.remove('hidden');
+      alertTitle.innerText = '⚠️ SAFETY CAR DEPLOYED';
+      alertDesc.innerText = 'FIELD SPEED RESTRICTED TO DELTA • CHEAP PIT STOP ADVANTAGE ACTIVE (-40% PIT LOSS = ~13.5s)';
+    } else if (status === 'VirtualSafetyCar' || status === 'Yellow') {
+      alertBanner.className = 'race-control-alert vsc-active';
+      alertBanner.classList.remove('hidden');
+      alertTitle.innerText = '🟡 VIRTUAL SAFETY CAR (VSC)';
+      alertDesc.innerText = 'DRIVERS MUST MAINTAIN POSITIVE DELTA • CHEAP PIT STOP ADVANTAGE ACTIVE (-30% PIT LOSS = ~15.8s)';
+    } else if (status === 'RedFlag') {
+      alertBanner.className = 'race-control-alert red-active';
+      alertBanner.classList.remove('hidden');
+      alertTitle.innerText = '🔴 RED FLAG — RACE SUSPENDED';
+      alertDesc.innerText = 'RACE SUSPENDED • ALL CARS MUST REDUCE SPEED AND RETURN TO PIT LANE';
+    } else {
+      alertBanner.className = 'race-control-alert hidden';
+    }
+  }
+
+  // 3. Update Pit Advantage Label in Strategy Console
+  const advBadge = document.getElementById('pitAdvantageBadge');
+  if (advBadge) {
+    if (status === 'SafetyCar') {
+      advBadge.className = 'pit-adv-cheap';
+      advBadge.innerText = '★ SC DISCOUNT: 13.5s (-9.0s GAIN!)';
+    } else if (status === 'VirtualSafetyCar') {
+      advBadge.className = 'pit-adv-cheap';
+      advBadge.innerText = '★ VSC DISCOUNT: 15.8s (-6.7s GAIN)';
+    } else {
+      advBadge.className = 'pit-adv-normal';
+      advBadge.innerText = 'PIT LOSS: 22.5s (NORMAL)';
+    }
+  }
+
+  // 4. Update RC Simulator Button Highlights
+  ['Green', 'VirtualSafetyCar', 'SafetyCar', 'RedFlag'].forEach(st => {
+    const btn = document.getElementById(`rcBtn${st === 'VirtualSafetyCar' ? 'VSC' : st === 'SafetyCar' ? 'SC' : st}`);
+    if (btn) btn.classList.toggle('active', st === status);
+  });
+}
+
+// Background analytical simulation to update the 4 Key Insight Cards
+async function runSingleDriverSimulation(activateVisuals = false, isBoxNow = false) {
   const driverObj = lerpDriversMap.get(followedDriverNo);
-  const curLap = (driverObj && driverObj.current_lap) 
-    ? driverObj.current_lap 
-    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
-  const pitLap = isBoxNow 
-    ? curLap 
-    : (parseInt(document.getElementById('userPitLapInput')?.value) || Math.min(53, curLap + 4));
-  const rawCompound = document.getElementById('userNewCompoundSelect')?.value || "Hard";
-  const newCompound = normalizeCompound(rawCompound);
+  const curLap = driverObj ? (driverObj.current_lap || 1) : 1;
+  const pitLap = isBoxNow ? curLap : Math.min(53, curLap + 4);
 
   const payload = {
     session_key: parseInt(document.getElementById('boundSessionKey')?.value) || 9000,
     driver_number: followedDriverNo,
     pit_lap: pitLap,
-    new_compound: newCompound,
+    new_compound: selectedTargetCompound,
     current_lap: curLap,
     track_id: currentSessionLocation || "monza",
   };
@@ -90,159 +423,52 @@ async function runSingleDriverSimulation(isBoxNow = false) {
     if (resp.ok) {
       const data = await resp.json();
       renderSingleDriverSimResults(data);
-    } else {
-      const errText = await resp.text();
-      console.error("Single driver simulation returned error:", resp.status, errText);
     }
   } catch (e) {
-    console.error("Single driver simulation failed", e);
+    // Non-fatal, local simulation continues regardless
+    console.debug("Backend projection fetch completed/skipped:", e);
   }
 }
 
+// Render clean, modern KPI cards in the Strategy Console
 function renderSingleDriverSimResults(data) {
-  const card = document.getElementById('driverSimResultCard');
-  if (!card) return;
-  card.classList.remove('hidden');
+  if (!data) return;
 
-  const title = document.getElementById('simSummaryTitle');
-  if (title) title.innerText = data.is_box_this_lap ? '🚨 BOX THIS LAP EXECUTED' : 'TARGET STRATEGY PROJECTION';
+  const kpiFinish = document.getElementById('kpiFinishPos');
+  if (kpiFinish) kpiFinish.innerText = `P${data.projected_finish_position || 1}`;
 
-  const deltaEl = document.getElementById('simSummaryDelta');
-  if (deltaEl) {
-    const d = data.position_delta;
-    deltaEl.className = d > 0 ? 'pos-gain' : (d < 0 ? 'pos-loss' : 'pos-same');
-    deltaEl.innerText = d > 0 ? `▲${d}` : (d < 0 ? `▼${Math.abs(d)}` : '―');
+  const kpiDelta = document.getElementById('kpiDeltaPos');
+  if (kpiDelta) {
+    const d = data.position_delta || 0;
+    kpiDelta.className = `kpi-delta ${d > 0 ? 'pos-gain' : d < 0 ? 'pos-loss' : 'pos-same'}`;
+    kpiDelta.innerText = d > 0 ? `▲ ${d} POS` : d < 0 ? `▼ ${Math.abs(d)} POS` : '― SAME';
   }
 
-  const finishPos = document.getElementById('simFinishPos');
-  if (finishPos) finishPos.innerText = `P${data.projected_finish_position}`;
+  const kpiGap = document.getElementById('kpiGapLeader');
+  if (kpiGap) kpiGap.innerText = `+${(data.projected_gap_to_leader || 0).toFixed(1)}s`;
 
-  const gapWin = document.getElementById('simGapWinner');
-  if (gapWin) gapWin.innerText = `+${data.projected_gap_to_leader}s`;
-
-  const winProb = document.getElementById('simWinProb');
-  if (winProb) winProb.innerText = `${data.monte_carlo_metrics.win_probability_pct}%`;
-
-  const undercutAdv = document.getElementById('simUndercutAdv');
-  if (undercutAdv) undercutAdv.innerText = `+${data.undercut_advantage_seconds}s`;
-
-  // Traffic Window
-  const trafficBadge = document.getElementById('simTrafficRiskBadge');
-  const trafficDesc = document.getElementById('simTrafficDesc');
-  if (trafficBadge && trafficDesc) {
-    trafficDesc.innerText = data.traffic_risk;
+  const kpiTraffic = document.getElementById('kpiTrafficRisk');
+  const kpiTrafficDesc = document.getElementById('kpiTrafficDesc');
+  if (kpiTraffic && data.traffic_risk) {
     if (data.traffic_risk.startsWith('HIGH')) {
-      trafficBadge.className = 'traffic-badge-high';
-      trafficBadge.innerText = 'DRS TRAIN RISK';
+      kpiTraffic.innerText = 'DRS TRAIN';
+      kpiTraffic.style.color = 'var(--color-red)';
     } else if (data.traffic_risk.startsWith('MEDIUM')) {
-      trafficBadge.className = 'traffic-badge-mid';
-      trafficBadge.innerText = 'MODERATE GAP';
+      kpiTraffic.innerText = 'MODERATE';
+      kpiTraffic.style.color = 'var(--color-yellow)';
     } else {
-      trafficBadge.className = 'traffic-badge-low';
-      trafficBadge.innerText = 'CLEAN AIR';
+      kpiTraffic.innerText = 'CLEAN AIR';
+      kpiTraffic.style.color = 'var(--color-green)';
     }
   }
-
-  // Emerges Behind & Ahead pills
-  const behindContainer = document.getElementById('simEmergesBehindPills');
-  if (behindContainer) {
-    behindContainer.innerHTML = (data.emerges_behind || []).map(d => `<span class="driver-pill">${d}</span>`).join('') || '<span style="color: var(--text-muted); font-size: 8px;">None (Leading field)</span>';
+  if (kpiTrafficDesc) {
+    kpiTrafficDesc.innerText = `+${(data.pit_exit_gap_ahead_seconds || 3.5).toFixed(1)}s TO CAR AHEAD`;
   }
 
-  const aheadContainer = document.getElementById('simEmergesAheadPills');
-  if (aheadContainer) {
-    aheadContainer.innerHTML = (data.emerges_ahead || []).map(d => `<span class="driver-pill">${d}</span>`).join('') || '<span style="color: var(--text-muted); font-size: 8px;">None</span>';
+  const kpiUndercut = document.getElementById('kpiUndercut');
+  if (kpiUndercut) {
+    kpiUndercut.innerText = `+${(data.undercut_advantage_seconds || 1.4).toFixed(1)}s`;
   }
-
-  // Monte Carlo Distribution
-  const p10 = document.getElementById('simP10');
-  const p50 = document.getElementById('simP50');
-  const p90 = document.getElementById('simP90');
-  const riskScore = document.getElementById('simRiskScore');
-  if (p10) p10.innerText = formatLapTime(data.monte_carlo_metrics.p10_time_seconds);
-  if (p50) p50.innerText = formatLapTime(data.monte_carlo_metrics.expected_time_seconds);
-  if (p90) p90.innerText = formatLapTime(data.monte_carlo_metrics.p90_time_seconds);
-  if (riskScore) riskScore.innerText = `${data.monte_carlo_metrics.risk_score}s`;
-
-  // Teammate & Dynamic ODI
-  const teammateEl = document.getElementById('simTeammateBenchmark');
-  if (teammateEl) {
-    teammateEl.innerText = `Pace blended with #${data.teammate_tla} (30% weight) • Base: ${formatLapTime(data.blended_pace_seconds)}/lap`;
-  }
-  const odiEl = document.getElementById('simDynamicOdiInfo');
-  if (odiEl) {
-    odiEl.innerText = `Dynamic ODI: ${data.dynamic_odi_rating} • Undercut: +${data.undercut_advantage_seconds}s`;
-  }
-
-  // Phase 6: Activate visual simulation trajectory on track canvas and timing tower
-  activateSimulationTrajectory(data);
-}
-
-function activateSimulationTrajectory(data) {
-  if (!data) return;
-  simOverlayState.isActive = true;
-  simOverlayState.driverNumber = data.driver_number;
-  simOverlayState.driverTla = data.driver_tla || "NOR";
-  simOverlayState.currentLap = data.current_lap || 20;
-  simOverlayState.pitLap = data.pit_lap || 22;
-  simOverlayState.newCompound = data.new_compound || "HARD";
-  simOverlayState.projectedFinishPos = data.projected_finish_position || 1;
-  simOverlayState.posDelta = data.position_delta || 0;
-  simOverlayState.timeline = data.lap_timeline || [];
-  simOverlayState.activeTimelineIndex = 0;
-  simOverlayState.isPlaying = true;
-  simOverlayState.isCurrentlyBoxing = (data.is_box_this_lap === true || data.pit_lap === data.current_lap);
-
-  // Initialize simulated dot progress from followed driver's current progress
-  const currentDriver = lerpDriversMap.get(data.driver_number);
-  if (currentDriver && currentDriver.progress !== undefined && currentDriver.progress !== null) {
-    simOverlayState.simulatedProgress = currentDriver.progress;
-  } else {
-    simOverlayState.simulatedProgress = 0.5;
-  }
-
-  // Show Banner and Scrubber
-  const banner = document.getElementById('simModeBanner');
-  const scrubber = document.getElementById('simScrubberBar');
-  if (banner) banner.classList.remove('hidden');
-  if (scrubber) scrubber.classList.remove('hidden');
-
-  // Update Banner UI
-  const dEl = document.getElementById('simBannerDriver');
-  if (dEl) dEl.innerText = `#${data.driver_number} ${data.driver_tla || getDriverTla({ driver_number: data.driver_number })}`;
-  const pEl = document.getElementById('simBannerPlan');
-  if (pEl) {
-    pEl.innerText = simOverlayState.isCurrentlyBoxing 
-      ? `(🚨 BOX NOW ➔ ${data.new_compound})` 
-      : `(BOX L${data.pit_lap} ➔ ${data.new_compound})`;
-  }
-  const posEl = document.getElementById('simBannerPos');
-  if (posEl) {
-    const sign = data.position_delta >= 0 ? '▲' : '▼';
-    posEl.className = data.position_delta >= 0 ? 'pos-gain' : 'pos-loss';
-    posEl.innerText = `PROJ P${data.projected_finish_position} (${sign}${Math.abs(data.position_delta)})`;
-  }
-
-  // Configure Lap Scrubber
-  const lapRange = document.getElementById('simLapScrubber');
-  if (lapRange) {
-    lapRange.min = 0;
-    lapRange.max = Math.max(0, simOverlayState.timeline.length - 1);
-    lapRange.value = 0;
-  }
-
-  updateSimScrubberUI();
-  renderTimingTowerTable();
-}
-
-function exitSimulationMode() {
-  simOverlayState.isActive = false;
-  simOverlayState.isCurrentlyBoxing = false;
-  const banner = document.getElementById('simModeBanner');
-  const scrubber = document.getElementById('simScrubberBar');
-  if (banner) banner.classList.add('hidden');
-  if (scrubber) scrubber.classList.add('hidden');
-  renderTimingTowerTable();
 }
 
 function simToggleGhost() {
@@ -258,307 +484,4 @@ function simTogglePlay() {
     btn.innerText = simOverlayState.isPlaying ? '⏸ PAUSE SIM' : '▶ PLAY SIM';
     btn.classList.toggle('active-play', simOverlayState.isPlaying);
   }
-}
-
-function simSetSpeed(speed) {
-  simOverlayState.playbackSpeed = speed;
-  [1, 2, 5].forEach(s => {
-    const btn = document.getElementById(`simSpeed${s}`);
-    if (btn) btn.classList.toggle('active', s === speed);
-  });
-}
-
-function simOnLapScrub(val) {
-  const idx = parseInt(val) || 0;
-  simOverlayState.activeTimelineIndex = Math.max(0, Math.min(simOverlayState.timeline.length - 1, idx));
-  updateSimScrubberUI();
-  renderTimingTowerTable();
-}
-
-function updateSimScrubberUI() {
-  const snap = simOverlayState.timeline[simOverlayState.activeTimelineIndex];
-  const curLap = snap ? snap.lap_number : (simOverlayState.currentLap + simOverlayState.activeTimelineIndex);
-  const totalLaps = 53;
-
-  const lapDisp = document.getElementById('simLapDisplay');
-  if (lapDisp) lapDisp.innerText = `LAP ${curLap} / ${totalLaps}`;
-
-  const bannerLap = document.getElementById('simBannerLap');
-  if (bannerLap) bannerLap.innerText = `LAP ${curLap} / ${totalLaps}`;
-
-  const lapRange = document.getElementById('simLapScrubber');
-  if (lapRange && parseInt(lapRange.value) !== simOverlayState.activeTimelineIndex) {
-    lapRange.value = simOverlayState.activeTimelineIndex;
-  }
-
-  if (snap) {
-    const posEl = document.getElementById('simBannerPos');
-    if (posEl) {
-      posEl.innerText = `PROJ P${snap.projected_position}${snap.is_pit_lap ? ' (BOX NOW)' : ''}`;
-    }
-  }
-}
-
-// Multi-driver simulation runner
-async function runMultiDriverSimulation() {
-  const driverObj = lerpDriversMap.get(followedDriverNo);
-  const curLap = (driverObj && driverObj.current_lap) 
-    ? driverObj.current_lap 
-    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
-  const targetPitLap = parseInt(document.getElementById('userPitLapInput')?.value) || Math.min(53, curLap + 4);
-  const rawCompound = document.getElementById('userNewCompoundSelect')?.value || "Hard";
-  const newCompound = normalizeCompound(rawCompound);
-  const r1Reaction = document.getElementById('rival1Reaction')?.value || "CoverUndercut";
-  const r2Reaction = document.getElementById('rival2Reaction')?.value || "ExtendStint";
-
-  const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
-  const topContenders = allDrivers.slice(0, 5);
-
-  const simDrivers = topContenders.map(d => {
-    const isFollowed = (d.driver_number === followedDriverNo);
-    let plannedLaps = [];
-    let targetComps = [];
-    let reaction = "Standard";
-
-    if (isFollowed) {
-      plannedLaps = [targetPitLap];
-      targetComps = [newCompound];
-      reaction = "Standard";
-    } else if (d.position === 1 || d.position === 2) {
-      plannedLaps = [Math.min(53, targetPitLap + 2)];
-      targetComps = ["Hard"];
-      reaction = r1Reaction;
-    } else {
-      plannedLaps = [Math.min(53, targetPitLap + 8)];
-      targetComps = ["Medium"];
-      reaction = r2Reaction;
-    }
-
-    return {
-      driver_id: d.tla || getDriverTla(d),
-      team: d.team || getDriverTeam(d),
-      current_position: d.position,
-      gap_to_leader_seconds: (d.position - 1) * 2.2,
-      current_compound: normalizeCompound(d.compound || "Medium"),
-      tyre_age: d.tyre_age || 15,
-      planned_pit_laps: plannedLaps,
-      target_compounds: targetComps,
-      rival_reaction_mode: reaction
-    };
-  });
-
-  const payload = {
-    total_laps: 53,
-    current_lap: curLap,
-    track_id: currentSessionLocation || "monza",
-    drivers: simDrivers
-  };
-
-  try {
-    const resp = await fetch('/api/simulate-multi', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (resp.ok) {
-      const data = await resp.json();
-      renderMultiDriverSimResults(data);
-    } else {
-      const errText = await resp.text();
-      console.error("Multi-driver simulation returned error:", resp.status, errText);
-    }
-  } catch (e) {
-    console.error("Multi-driver simulation request failed", e);
-  }
-}
-
-function renderMultiDriverSimResults(data) {
-  const container = document.getElementById('multiSimResultsContainer');
-  const content = document.getElementById('multiSimResultsContent');
-  if (!container || !content) return;
-
-  container.classList.remove('hidden');
-
-  let rows = '';
-  const outcomes = data.results || data.driver_outcomes || [];
-  outcomes.forEach(o => {
-    const finalPos = o.projected_finish_position || o.final_position || 1;
-    const startPos = o.starting_position || o.initial_position || finalPos;
-    const delta = (o.position_delta !== undefined) ? o.position_delta : (startPos - finalPos);
-    const deltaClass = delta > 0 ? 'pos-gain' : (delta < 0 ? 'pos-loss' : 'pos-same');
-    const deltaSymbol = delta > 0 ? `▲${delta}` : (delta < 0 ? `▼${Math.abs(delta)}` : '―');
-    const gap = (o.delta_to_winner_seconds !== undefined) 
-      ? o.delta_to_winner_seconds 
-      : (o.gap_to_winner || 0.0);
-    const pits = (o.pit_stops_completed !== undefined) 
-      ? o.pit_stops_completed 
-      : (o.pit_stops || 0);
-
-    rows += `
-      <tr>
-        <td style="font-weight: 800;">P${finalPos}</td>
-        <td><strong>${o.driver_id}</strong> <span style="font-size: 8px; color: var(--text-muted);">${o.team}</span></td>
-        <td class="${deltaClass}">${deltaSymbol}</td>
-        <td>+${gap.toFixed(1)}s</td>
-        <td><span class="pit-tag">${pits} PITS</span></td>
-      </tr>
-    `;
-  });
-
-  content.innerHTML = `
-    <table class="multi-sim-results-table">
-      <thead>
-        <tr>
-          <th>FIN</th>
-          <th>DRIVER</th>
-          <th>DELTA</th>
-          <th>GAP</th>
-          <th>STRAT</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
-    <div class="narrative-box">
-      <strong>AI RACE ENGINEER SUMMARY:</strong><br>
-      ${data.race_narrative || 'All driver hypotheses evaluated successfully.'}
-    </div>
-  `;
-}
-
-// Global AI strategy optimization call
-async function runSimulation() {
-  const driverObj = lerpDriversMap.get(followedDriverNo);
-  const curLap = (driverObj && driverObj.current_lap) 
-    ? driverObj.current_lap 
-    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
-  const curCompound = normalizeCompound((driverObj && driverObj.compound) 
-    ? driverObj.compound 
-    : (document.getElementById('tireSelect')?.value || "Medium"));
-  const curTyreAge = (driverObj && driverObj.tyre_age !== undefined) 
-    ? driverObj.tyre_age 
-    : (parseInt(document.getElementById('tireAgeInput')?.value) || 15);
-  const mandatoryPit = (driverObj && (driverObj.pit_stop_count || 0) > 0) || false;
-
-  const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
-  const egoPos = driverObj ? driverObj.position : 1;
-  const competitors = allDrivers
-    .filter(d => d.driver_number !== followedDriverNo)
-    .slice(0, 8)
-    .map(d => ({
-      driver_name: d.tla || getDriverTla(d),
-      team: d.team || getDriverTeam(d),
-      current_lap: d.current_lap || curLap,
-      gap_to_ego_seconds: (d.position - egoPos) * 1.8,
-      current_tire: normalizeCompound(d.compound || "Medium"),
-      tire_age_laps: d.tyre_age || 10,
-      projected_pit_lap: Math.min(53, curLap + 5)
-    }));
-
-  const payload = {
-    track: {
-      total_laps: 53,
-      base_pit_stop_loss_seconds: 22.5,
-      historical_sc_probability: 0.30
-    },
-    environment: "Green",
-    ego_car: {
-      current_lap: curLap,
-      current_tire: curCompound,
-      tire_age_laps: curTyreAge,
-      mandatory_pit_completed: mandatoryPit,
-      front_wing_damage: false,
-      time_penalty_seconds: 0.0
-    },
-    competitors: competitors,
-    weather_forecast: null
-  };
-
-  try {
-    const res = await fetch('/simulate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const allStrats = [];
-      if (data.optimal_strategy) allStrats.push(data.optimal_strategy);
-      if (Array.isArray(data.alternative_strategies)) {
-        allStrats.push(...data.alternative_strategies);
-      }
-      renderStrategies(allStrats);
-
-      const alertBox = document.getElementById('alertBox');
-      if (alertBox && data.summary_message) {
-        alertBox.innerHTML = `
-          <div style="font-size: 10px; color: var(--color-green); background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; padding: 4px 8px; margin-bottom: 8px;">
-            🏁 <strong>OPTIMIZER:</strong> ${data.summary_message}
-            ${data.safety_car_advantage_active ? ' • <span style="color: var(--color-yellow)">SC WINDOW BONUS ACTIVE</span>' : ''}
-          </div>
-        `;
-      }
-    } else {
-      const errText = await res.text();
-      console.error("Simulation run returned error:", res.status, errText);
-    }
-  } catch (err) {
-    console.error("Simulation run failed:", err);
-  }
-}
-
-function renderStrategies(strategies) {
-  const container = document.getElementById('strategyResults');
-  if (!container) return;
-  container.innerHTML = '';
-
-  (strategies || []).forEach((strat, idx) => {
-    const isOpt = (idx === 0);
-    const card = document.createElement('div');
-    card.className = `matrix-card ${isOpt ? 'optimal' : ''}`;
-
-    let stopsDesc = (!strat.pit_stops || strat.pit_stops.length === 0) 
-      ? 'NO STOP (0-STOP)' 
-      : strat.pit_stops.map(p => `LAP ${p.pit_lap || p.lap} ➔ ${p.new_compound || p.compound}`).join(' | ');
-
-    const metrics = strat.monte_carlo_metrics || strat.metrics || {
-      expected_time_seconds: strat.projected_total_time_seconds || 0,
-      win_probability_pct: isOpt ? 85.0 : 42.0,
-      p10_time_seconds: (strat.projected_total_time_seconds || 0) - 4.5,
-      p90_time_seconds: (strat.projected_total_time_seconds || 0) + 7.2
-    };
-
-    const expTimeFormatted = strat.projected_total_time_formatted 
-      || formatLapTime(metrics.expected_time_seconds);
-
-    card.innerHTML = `
-      <div class="matrix-title">
-        <span>${isOpt ? '★ OPTIMAL ' : ''}${strat.name.toUpperCase()}</span>
-        <span>${stopsDesc}</span>
-      </div>
-      <div style="font-size: 10px; color: var(--text-muted);">${strat.description || `${strat.total_pit_stops} Pit Stop Strategy • Delta: ${strat.delta_to_optimal_seconds > 0 ? '+' + strat.delta_to_optimal_seconds.toFixed(2) + 's' : 'BASELINE'}`}</div>
-      <div class="stat-grid">
-        <div class="stat-box">
-          <div class="stat-label">EXP. TIME</div>
-          <div class="stat-val">${expTimeFormatted}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">WIN PROB</div>
-          <div class="stat-val" style="color: var(--color-green)">${metrics.win_probability_pct ? metrics.win_probability_pct.toFixed(1) : 0}%</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">P10 (CEILING)</div>
-          <div class="stat-val">${formatLapTime(metrics.p10_time_seconds)}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">P90 (RISK)</div>
-          <div class="stat-val">${formatLapTime(metrics.p90_time_seconds)}</div>
-        </div>
-      </div>
-    `;
-    container.appendChild(card);
-  });
 }

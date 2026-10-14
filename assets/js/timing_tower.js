@@ -8,27 +8,7 @@ function renderTimingTowerTable() {
 
   let drivers = Array.from(lerpDriversMap.values()).map(d => ({ ...d }));
 
-  // If Simulation Overlay is active, inject projected state for the simulated driver
-  if (simOverlayState.isActive && simOverlayState.timeline.length > 0) {
-    const snap = simOverlayState.timeline[simOverlayState.activeTimelineIndex];
-    if (snap) {
-      const simIdx = drivers.findIndex(d => d.driver_number === simOverlayState.driverNumber);
-      if (simIdx !== -1) {
-        drivers[simIdx].position = snap.projected_position;
-        drivers[simIdx].gap = snap.projected_position === 1 ? 'LEADER' : `+${snap.gap_to_leader_seconds.toFixed(1)}s`;
-        drivers[simIdx].interval = snap.interval_seconds > 0 ? `+${snap.interval_seconds.toFixed(1)}s` : '―';
-        drivers[simIdx].compound = snap.compound;
-        drivers[simIdx].tyre_age = snap.tyre_age;
-        drivers[simIdx].isSimRow = true;
-        drivers[simIdx].isPitLap = snap.is_pit_lap || simOverlayState.isCurrentlyBoxing;
-        drivers[simIdx].last_lap_time = snap.lap_time_seconds;
-        if (snap.is_pit_lap || simOverlayState.isCurrentlyBoxing) {
-          drivers[simIdx].pit_stop_count = (drivers[simIdx].pit_stop_count || 0) + 1;
-        }
-      }
-    }
-  }
-
+  // Sort by dynamically evaluated race distance and position
   drivers.sort((a, b) => a.position - b.position);
 
   drivers.forEach(d => {
@@ -101,6 +81,9 @@ function selectFollowedDriver(dNo, tla, compound, age, pits, team, evt) {
   const heroPos = document.getElementById('heroPosBadge');
   if (heroPos) heroPos.innerText = `P${pos}`;
 
+  const heroGap = document.getElementById('heroGapLeader');
+  if (heroGap) heroGap.innerText = driverObj ? driverObj.gap : "LEADER";
+
   const heroTyre = document.getElementById('heroTyreBadge');
   if (heroTyre) {
     heroTyre.innerText = compInfo.tag;
@@ -112,6 +95,19 @@ function selectFollowedDriver(dNo, tla, compound, age, pits, team, evt) {
 
   const heroPits = document.getElementById('heroPitCount');
   if (heroPits) heroPits.innerText = `${pits || 0} PITS`;
+
+  const modeTag = document.getElementById('simModeTag');
+  if (modeTag) {
+    const isSim = (simOverlayState.isActive && simOverlayState.driverNumber === dNo);
+    modeTag.className = `telemetry-mode-tag ${isSim ? 'mode-sim' : 'mode-live'}`;
+    modeTag.innerText = isSim ? "🟣 SIMULATED DIGITAL TWIN" : "● LIVE OPENF1";
+  }
+
+  const btnReset = document.getElementById('btnResetToLive');
+  if (btnReset) {
+    const isSim = (simOverlayState.isActive && simOverlayState.driverNumber === dNo);
+    btnReset.classList.toggle('hidden', !isSim);
+  }
 
   // Update current lap input
   const curLap = driverObj ? (driverObj.current_lap || 20) : 20;
@@ -147,5 +143,5 @@ function selectFollowedDriver(dNo, tla, compound, age, pits, team, evt) {
   }
 
   runSimulation();
-  runSingleDriverSimulation();
+  runSingleDriverSimulation(false, false);
 }

@@ -1,398 +1,456 @@
-/* Matrix Cards */
-.matrix-card {
-  background: #07070a;
-  border: 1px solid var(--border-dark);
-  padding: 10px;
-  margin-bottom: 10px;
-}
+/* ==========================================
+   PIT WALL DECISION CONSOLE & STRATEGY STYLES
+   ========================================== */
 
-.matrix-card.optimal {
-  border-color: var(--color-purple);
-}
-
-.matrix-title {
-  font-weight: 700;
-  color: var(--color-purple);
-  margin-bottom: 4px;
+.right-pitwall-panel {
   display: flex;
-  justify-content: space-between;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 10px;
-}
-
-.stat-box {
-  background: #0d0d12;
-  padding: 5px 6px;
-  border: 1px solid #181820;
-}
-
-.stat-label { color: var(--text-muted); }
-.stat-val { font-weight: 700; color: var(--text-main); font-size: 11px; }
-
-/* Strategy Playground & Multi-Driver Simulator */
-.sim-playground {
-  background: #07070b;
-  border: 1px solid var(--border-dark);
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-dark);
   padding: 10px;
-  margin-bottom: 12px;
+  overflow-y: auto;
 }
 
-.driver-hero-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #0d0d16;
+/* 1. Driver Focus Card */
+.driver-focus-card {
+  background: linear-gradient(145deg, rgba(22, 22, 34, 0.85) 0%, rgba(12, 12, 20, 0.95) 100%);
   border: 1px solid var(--border-light);
-  padding: 8px 10px;
+  border-radius: 6px;
+  padding: 10px 12px;
   margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
 }
 
-.driver-hero-name {
-  font-size: 13px;
-  font-weight: 800;
+.focus-top-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  margin-bottom: 8px;
 }
 
-.box-now-btn {
-  width: 100%;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  border: 1px solid #f87171;
-  padding: 7px 12px;
-  cursor: pointer;
+.focus-driver-id {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  margin-bottom: 10px;
-  transition: filter 0.15s ease, transform 0.1s ease;
-}
-.box-now-btn:hover {
-  filter: brightness(1.2);
-  transform: translateY(-1px);
-}
-.box-now-btn:active {
-  transform: translateY(1px);
 }
 
-.odi-gauge-card {
-  background: #0b0b14;
-  border: 1px solid #202035;
-  padding: 7px 9px;
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.odi-badge {
-  font-weight: 800;
-  padding: 2px 6px;
-  font-size: 10px;
-  border-radius: 2px !important;
-}
-.odi-low { background: rgba(34, 197, 94, 0.2); color: var(--color-green); border: 1px solid var(--color-green); }
-.odi-mid { background: rgba(234, 179, 8, 0.2); color: var(--color-yellow); border: 1px solid var(--color-yellow); }
-.odi-high { background: rgba(239, 68, 68, 0.2); color: var(--color-red); border: 1px solid var(--color-red); }
-
-.driver-sim-card {
-  background: #090912;
-  border: 1px solid #2d2042;
-  padding: 10px;
-  margin-top: 10px;
-  margin-bottom: 12px;
-  border-left: 3px solid var(--color-purple);
-}
-
-.sim-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-weight: 800;
-  font-size: 11px;
-  color: #ffffff;
-}
-
-.sim-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.sim-metric-box {
-  background: #0f0f1b;
-  border: 1px solid #1a1a2e;
-  padding: 6px 8px;
-}
-
-.sim-metric-label {
-  font-size: 8px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  display: block;
-}
-
-.sim-metric-val {
-  font-size: 13px;
-  font-weight: 800;
-  margin-top: 2px;
-  display: block;
-}
-
-.traffic-window-box {
-  background: #07070f;
-  border: 1px solid #1c1c2a;
-  padding: 7px 9px;
-  margin-bottom: 8px;
-}
-
-.traffic-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.traffic-badge-low {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--color-green);
-  border: 1px solid var(--color-green);
-  font-size: 8px;
-  font-weight: 800;
-  padding: 1px 5px;
-}
-
-.traffic-badge-mid {
-  background: rgba(234, 179, 8, 0.2);
-  color: var(--color-yellow);
-  border: 1px solid var(--color-yellow);
-  font-size: 8px;
-  font-weight: 800;
-  padding: 1px 5px;
-}
-
-.traffic-badge-high {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--color-red);
-  border: 1px solid var(--color-red);
-  font-size: 8px;
-  font-weight: 800;
-  padding: 1px 5px;
-}
-
-.traffic-desc {
-  font-size: 9px;
-  color: #cccccc;
-  margin-bottom: 5px;
-  line-height: 1.3;
-}
-
-.traffic-driver-pills {
-  font-size: 9px;
-}
-
-.pills-container {
-  display: inline-flex;
-  gap: 4px;
-  margin-left: 6px;
-  vertical-align: middle;
-  flex-wrap: wrap;
-}
-
-.driver-pill {
-  background: #151524;
-  border: 1px solid #303048;
-  color: #ffffff;
-  padding: 0 4px;
-  font-size: 8px;
-  font-weight: 700;
-}
-
-.mc-distribution-box {
-  background: #0b0b16;
-  border: 1px solid #1c1c2a;
-  padding: 7px 9px;
-  margin-bottom: 8px;
-}
-
-.mc-distribution-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  color: #aaaacc;
-  margin-top: 3px;
-}
-
-.mc-distribution-row strong {
-  color: #ffffff;
-}
-
-.sim-benchmark-footer {
-  border-top: 1px solid #1a1a28;
-  padding-top: 6px;
-  margin-top: 4px;
-}
-
-.btn-sim-group {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.action-btn-secondary {
-  background: #12121f;
-  border: 1px solid var(--color-purple);
-  color: #ffffff;
-  font-weight: 700;
-  padding: 6px 10px;
-  font-size: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: 1;
-}
-.action-btn-secondary:hover {
+.team-stripe-lg {
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
   background: var(--color-purple);
-  color: #000000;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
 }
 
-.rival-reaction-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-  font-size: 10px;
-}
-
-.rival-reaction-row select {
-  width: 58%;
-  padding: 4px 6px;
-  font-size: 10px;
-}
-
-.multi-sim-results-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 10px;
-  margin-top: 8px;
-}
-
-.multi-sim-results-table th {
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-dark);
-  padding: 4px;
-  text-align: left;
-  font-size: 9px;
-}
-
-.multi-sim-results-table td {
-  padding: 4px 4px;
-  border-bottom: 1px solid #14141e;
-}
-
-.narrative-box {
-  background: #080810;
-  border-left: 3px solid var(--color-purple);
-  padding: 8px 10px;
-  margin-top: 10px;
-  font-size: 10px;
-  line-height: 1.4;
-  color: #bbbbdd;
-}
-
-.box-now-alert {
-  background: var(--color-red);
-  color: #fff;
+.driver-code {
+  font-size: 15px;
   font-weight: 800;
-  text-align: center;
-  padding: 8px;
-  margin-bottom: 12px;
-  letter-spacing: 1px;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.pos-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-purple);
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.telemetry-mode-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.mode-live {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.mode-sim {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--color-purple);
+  border: 1px solid rgba(168, 85, 247, 0.45);
   animation: pulse 1s infinite alternate;
 }
 
-/* Phase 6: Simulated Trajectory Overlay Styles */
-.sim-mode-banner {
+.focus-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 8px;
+}
+
+.focus-stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-stat-label {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.focus-stat-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.tyre-age-text {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* 2. Tactical Pit Decision Console Card */
+.decision-console-card {
+  background: linear-gradient(145deg, rgba(20, 18, 30, 0.9) 0%, rgba(10, 9, 16, 0.95) 100%);
+  border: 1px solid var(--border-accent);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+.console-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(90deg, #180826 0%, #0a0414 100%);
-  border-bottom: 2px solid var(--color-purple);
-  padding: 5px 12px;
+  margin-bottom: 10px;
   font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
   letter-spacing: 0.5px;
-  z-index: 5;
-  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
 }
 
-.sim-banner-left {
+.pit-adv-normal {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+.pit-adv-cheap {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--color-yellow);
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 3px;
+  padding: 2px 6px;
+  animation: pulse 0.8s infinite alternate;
+}
+
+/* Tactile Compound Selector Pills */
+.compound-selector-group {
+  margin-bottom: 10px;
+}
+
+.selector-label {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.compound-pills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.comp-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 6px 4px;
+  cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.comp-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
-.sim-indicator-beacon {
+.comp-pill.active {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+}
+.pill-soft.active {
+  border-color: var(--compound-soft);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+.pill-medium.active {
+  border-color: var(--compound-medium);
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.3);
+}
+.pill-hard.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+}
+
+.pill-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50% !important;
-  background: var(--color-purple);
-  box-shadow: 0 0 10px var(--color-purple);
-  animation: pulse 0.8s infinite alternate;
+  border-radius: 50%;
   display: inline-block;
 }
 
-.sim-banner-right {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+.pill-text {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
 }
 
-.sim-banner-btn {
-  background: #11111e;
-  border: 1px solid var(--border-light);
+.pill-desc {
+  font-size: 7px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* The Big BOX THIS LAP Button */
+.btn-box-now {
+  width: 100%;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  border: 1px solid #f87171;
+  border-radius: 5px;
   color: #ffffff;
-  padding: 3px 8px;
-  font-size: 9px;
-  font-weight: 700;
+  padding: 10px 14px;
   cursor: pointer;
-}
-.sim-banner-btn:hover {
-  border-color: var(--color-purple);
-  color: var(--color-purple);
-}
-
-.btn-exit-sim {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: var(--color-red);
-  color: #ff8888;
-}
-.btn-exit-sim:hover {
-  background: var(--color-red);
-  color: #ffffff;
-}
-
-.sim-scrubber-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
-  background: #0e0618;
-  border-top: 1px solid var(--color-purple);
-  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+}
+.btn-box-now:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+.btn-box-now:active {
+  transform: translateY(1px);
+}
+
+.btn-box-now.box-confirmed {
+  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  border-color: #c084fc;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  animation: pulse 0.7s infinite alternate;
+}
+
+.box-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.box-labels {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.box-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.box-sub {
+  font-size: 8px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.btn-reset-live {
+  width: 100%;
+  margin-top: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 4px;
+  color: #fca5a5;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-reset-live:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ffffff;
+}
+
+/* 3. Race Control Simulator Card */
+.rc-simulator-card {
+  background: rgba(14, 14, 22, 0.7);
+  border: 1px solid var(--border-dark);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.rc-sim-header {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.rc-btn-group {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.rc-toggle-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 700;
+  padding: 5px 2px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.12s ease;
+}
+.rc-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.rc-toggle-btn.active {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+#rcBtnGreen.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+#rcBtnVSC.active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: var(--color-yellow);
+  color: var(--color-yellow);
+}
+#rcBtnSC.active {
+  background: rgba(245, 158, 11, 0.3);
+  border-color: #f59e0b;
+  color: #fef08a;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+#rcBtnRed.active {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+/* 4. Strategy KPI Grid */
+.strategy-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.kpi-card {
+  background: rgba(16, 16, 26, 0.7);
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-label {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.kpi-sub {
+  font-size: 8px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+.kpi-delta {
+  font-size: 9px;
+  font-weight: 800;
+  margin-top: 1px;
+}
+
+.pos-gain { color: var(--color-green); }
+.pos-loss { color: var(--color-red); }
+.pos-same { color: var(--text-muted); }
+
+/* Top Safety Car & Neutralization Alert Banner */
+.race-control-alert {
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 0.8s infinite alternate;
+  z-index: 6;
+}
+
+.sc-active {
+  background: linear-gradient(90deg, #b45309 0%, #d97706 50%, #b45309 100%);
+  color: #000000;
+  border-bottom: 2px solid #fbbf24;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.vsc-active {
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.3) 0%, rgba(234, 179, 8, 0.6) 50%, rgba(234, 179, 8, 0.3) 100%);
+  color: #fef08a;
+  border-bottom: 2px solid #eab308;
+}
+
+.red-active {
+  background: linear-gradient(90deg, #991b1b 0%, #dc2626 50%, #991b1b 100%);
+  color: #ffffff;
+  border-bottom: 2px solid #ef4444;
+}
+
+.rc-alert-content {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.rc-alert-title {
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.rc-alert-desc {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.95;
 }

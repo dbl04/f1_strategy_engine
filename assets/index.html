@@ -119,6 +119,14 @@
             </div>
           </div>
 
+          <!-- Race Control High-Visibility Neutralization Alert Banner -->
+          <div id="safetyCarAlertBanner" class="race-control-alert hidden">
+            <div class="rc-alert-content">
+              <span id="scAlertTitle" class="rc-alert-title">⚠️ SAFETY CAR DEPLOYED</span>
+              <span id="scAlertDesc" class="rc-alert-desc">FIELD SPEED RESTRICTED TO DELTA • CHEAP PIT STOP ADVANTAGE ACTIVE (-40% PIT LOSS = ~13.5s)</span>
+            </div>
+          </div>
+
           <!-- Phase 6: Simulated Strategy Trajectory Overlay Banner -->
           <div id="simModeBanner" class="sim-mode-banner hidden">
             <div class="sim-banner-left">
@@ -126,8 +134,6 @@
               <span style="font-weight: 800;">STRATEGY SIMULATION ACTIVE:</span>
               <span id="simBannerDriver" style="color: var(--color-purple); font-weight: 800;">#1 NOR</span>
               <span id="simBannerPlan" style="color: #ffffff;">(BOX L22 ➔ HARD)</span>
-              <span id="simBannerLap" style="background: #1e1030; border: 1px solid var(--color-purple); padding: 1px 6px; font-weight: 700;">LAP 20/53</span>
-              <span id="simBannerPos" class="pos-gain">PROJ P2 (▲1)</span>
             </div>
             <div class="sim-banner-right">
               <button class="sim-banner-btn" id="btnToggleGhost" onclick="simToggleGhost()">👻 GHOST: ON</button>
@@ -153,20 +159,6 @@
             </div>
             <div class="dvr-time-display" id="dvrTimeDisplay">T + 00:00:00</div>
           </div>
-
-          <!-- Phase 6: Simulated Trajectory Lap Scrubber Bar -->
-          <div id="simScrubberBar" class="sim-scrubber-bar hidden">
-            <button id="simPlayPauseBtn" class="dvr-btn active-play" onclick="simTogglePlay()">⏸ PAUSE SIM</button>
-            <div class="dvr-speed-group">
-              <button class="dvr-speed-btn active" id="simSpeed1" onclick="simSetSpeed(1)">1x</button>
-              <button class="dvr-speed-btn" id="simSpeed2" onclick="simSetSpeed(2)">2x</button>
-              <button class="dvr-speed-btn" id="simSpeed5" onclick="simSetSpeed(5)">5x</button>
-            </div>
-            <div class="dvr-scrubber-wrapper">
-              <input type="range" id="simLapScrubber" min="0" max="33" value="0" step="1" oninput="simOnLapScrub(this.value)">
-            </div>
-            <div class="dvr-time-display" id="simLapDisplay">LAP 20 / 53</div>
-          </div>
         </div>
 
         <div class="telemetry-container">
@@ -178,184 +170,133 @@
         </div>
       </div>
 
-      <!-- RIGHT PANEL: INTERACTIVE STRATEGY PLAYGROUND & CONTROLS -->
-      <div class="panel">
+      <!-- RIGHT PANEL: SLEEK PIT WALL DECISION CONSOLE -->
+      <div class="panel right-pitwall-panel">
         <div class="tab-bar">
-          <button class="tab-btn active" onclick="switchTab('tabStrategy')">STRATEGY</button>
+          <button class="tab-btn active" onclick="switchTab('tabStrategy')">PIT DECISION</button>
           <button class="tab-btn" onclick="switchTab('tabTelemetry')">TELEMETRY</button>
-          <button class="tab-btn" onclick="switchTab('tabRaceControl')">RACE CONTROL</button>
+          <button class="tab-btn" onclick="switchTab('tabRaceControl')">CONDITIONS</button>
         </div>
 
-        <!-- TAB 1: STRATEGY PLAYGROUND -->
+        <!-- TAB 1: STREAMLINED STRATEGY DECISION CONSOLE -->
         <div id="tabStrategy" class="tab-content active">
           
-          <!-- Selected Driver Hero Card -->
-          <div class="driver-hero-card">
-            <div class="driver-hero-name">
-              <span id="heroTeamStripe" class="team-stripe" style="background: var(--color-purple); height: 16px;"></span>
-              <span id="heroDriverTitle">#1 NOR</span>
-              <span id="heroPosBadge" style="color: var(--color-purple); font-size: 11px; margin-left: 4px;">P1</span>
+          <!-- 1. Followed Driver Focus & Live Telemetry Card -->
+          <div class="driver-focus-card">
+            <div class="focus-top-row">
+              <div class="focus-driver-id">
+                <span id="heroTeamStripe" class="team-stripe-lg"></span>
+                <span id="heroDriverTitle" class="driver-code">#1 NOR</span>
+                <span id="heroPosBadge" class="pos-badge">P1</span>
+              </div>
+              <div id="simModeTag" class="telemetry-mode-tag mode-live">● LIVE OPENF1</div>
             </div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <span id="heroTyreBadge" class="compound-tag comp-medium">MED</span>
-              <span id="heroTyreAge" style="font-size: 10px; color: var(--text-muted);">L15</span>
-              <span id="heroPitCount" class="pit-tag">1 PITS</span>
+
+            <div class="focus-stats-row">
+              <div class="focus-stat-item">
+                <span class="focus-stat-label">GAP TO LEADER</span>
+                <span id="heroGapLeader" class="focus-stat-val">LEADER</span>
+              </div>
+              <div class="focus-stat-item">
+                <span class="focus-stat-label">CURRENT TYRE</span>
+                <div style="display: flex; gap: 4px; align-items: center; margin-top: 2px;">
+                  <span id="heroTyreBadge" class="compound-tag comp-medium">MED</span>
+                  <span id="heroTyreAge" class="tyre-age-text">L15</span>
+                </div>
+              </div>
+              <div class="focus-stat-item">
+                <span class="focus-stat-label">PIT STOPS</span>
+                <span id="heroPitCount" class="focus-stat-val">1 STOP</span>
+              </div>
             </div>
           </div>
 
-          <!-- Dynamic ODI Gauge Widget -->
-          <div class="odi-gauge-card">
-            <div>
-              <div style="font-size: 8px; color: var(--text-muted); text-transform: uppercase;">DYNAMIC OVERTAKING DIFFICULTY</div>
-              <div style="font-size: 11px; font-weight: 700; margin-top: 1px;">ODI FACTOR: <span id="gaugeOdiVal">0.40</span></div>
+          <!-- 2. Pit Wall Decision Console (Hero Action Area) -->
+          <div class="decision-console-card">
+            <div class="console-header">
+              <span>TACTICAL PIT DECISION</span>
+              <span id="pitAdvantageBadge" class="pit-adv-normal">PIT LOSS: 22.5s</span>
             </div>
-            <span id="gaugeOdiBadge" class="odi-badge odi-mid">MODERATE</span>
-          </div>
 
-          <!-- Interactive User Strategy Controls -->
-          <div class="sim-playground">
-            <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">STRATEGY DECISION CONTROLLER</div>
-            
-            <button id="btnBoxThisLap" class="box-now-btn" onclick="triggerBoxThisLap()">
-              <span>🚨 BOX THIS LAP</span>
-              <span style="font-size: 9px; opacity: 0.9;">(TRIGGER UNDERCUT / REACT)</span>
+            <!-- Tactile Compound Selector Pills -->
+            <div class="compound-selector-group">
+              <div class="selector-label">TYRE TO FIT ON NEXT STOP:</div>
+              <div class="compound-pills">
+                <button type="button" class="comp-pill pill-soft" onclick="selectTargetCompound('Soft')">
+                  <span class="pill-dot" style="background: var(--compound-soft);"></span>
+                  <span class="pill-text">SOFT</span>
+                  <span class="pill-desc">MAX GRIP</span>
+                </button>
+                <button type="button" class="comp-pill pill-medium" onclick="selectTargetCompound('Medium')">
+                  <span class="pill-dot" style="background: var(--compound-medium);"></span>
+                  <span class="pill-text">MEDIUM</span>
+                  <span class="pill-desc">BALANCED</span>
+                </button>
+                <button type="button" class="comp-pill pill-hard active" onclick="selectTargetCompound('Hard')">
+                  <span class="pill-dot" style="background: #ffffff;"></span>
+                  <span class="pill-text">HARD</span>
+                  <span class="pill-desc">LOW DEG</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- The Big BOX THIS LAP Action Button -->
+            <button id="btnBoxThisLap" class="btn-box-now" onclick="triggerBoxThisLap()">
+              <span class="box-icon">🚨</span>
+              <div class="box-labels">
+                <span id="btnBoxTitle" class="box-title">BOX THIS LAP</span>
+                <span id="btnBoxSubtitle" class="box-sub">FIT NEW HARD TYRES • SWITCH TO SIMULATION</span>
+              </div>
             </button>
 
-            <div class="control-group">
-              <label>Target Pit Lap: <strong id="userPitLapDisplay" style="color: var(--color-purple);">L22</strong></label>
-              <input type="range" id="userPitLapRange" min="1" max="53" value="22" oninput="document.getElementById('userPitLapDisplay').innerText = 'L' + this.value; document.getElementById('userPitLapInput').value = this.value;">
-              <input type="hidden" id="userPitLapInput" value="22">
+            <!-- Reset to Live API Button -->
+            <button id="btnResetToLive" class="btn-reset-live hidden" onclick="exitSimulationMode()">
+              ↺ DISCARD SIMULATION & RETURN TO LIVE TELEMETRY
+            </button>
+          </div>
+
+          <!-- 3. Race Control Simulator Bar (Test SC / VSC Effects) -->
+          <div class="rc-simulator-card">
+            <div class="rc-sim-header">
+              <span>RACE CONTROL CONDITION SIMULATOR</span>
             </div>
-
-            <div class="control-group">
-              <label>Next Tyre Compound</label>
-              <select id="userNewCompoundSelect">
-                <option value="Hard" selected>HARD (C2 / C3 Prime)</option>
-                <option value="Medium">MEDIUM (C3 / C4 Option)</option>
-                <option value="Soft">SOFT (C4 / C5 Qualifying)</option>
-              </select>
-            </div>
-
-            <div class="btn-sim-group">
-              <button class="action-btn-secondary" onclick="runSingleDriverSimulation()">
-                <span>⚡ SIMULATE STRATEGY</span>
-              </button>
-              <button class="action-btn-secondary" onclick="runMultiDriverSimulation()">
-                <span>🏁 SIMULATE GRID BATTLE</span>
-              </button>
-            </div>
-
-            <!-- Single Driver Interactive Simulation Results Card -->
-            <div id="driverSimResultCard" class="driver-sim-card hidden">
-              <div class="sim-card-header">
-                <span id="simSummaryTitle">TARGET STRATEGY PROJECTION</span>
-                <span id="simSummaryDelta" class="pos-gain">▲1 POS</span>
-              </div>
-
-              <div class="sim-metric-grid">
-                <div class="sim-metric-box">
-                  <span class="sim-metric-label">PROJECTED FINISH</span>
-                  <span id="simFinishPos" class="sim-metric-val" style="color: var(--color-purple);">P2</span>
-                </div>
-                <div class="sim-metric-box">
-                  <span class="sim-metric-label">GAP TO LEADER</span>
-                  <span id="simGapWinner" class="sim-metric-val">+3.8s</span>
-                </div>
-                <div class="sim-metric-box">
-                  <span class="sim-metric-label">WIN PROBABILITY</span>
-                  <span id="simWinProb" class="sim-metric-val" style="color: var(--color-green);">42.5%</span>
-                </div>
-                <div class="sim-metric-box">
-                  <span class="sim-metric-label">UNDERCUT DELTA</span>
-                  <span id="simUndercutAdv" class="sim-metric-val" style="color: var(--color-cyan);">+1.6s</span>
-                </div>
-              </div>
-
-              <!-- Pit Exit Traffic Window Radar -->
-              <div class="traffic-window-box">
-                <div class="traffic-header">
-                  <span style="font-size: 8px; color: var(--text-muted); text-transform: uppercase;">PIT EXIT TRAFFIC WINDOW</span>
-                  <span id="simTrafficRiskBadge" class="traffic-badge-low">CLEAN AIR</span>
-                </div>
-                <div id="simTrafficDesc" class="traffic-desc">Emerges safely into a 3.8s clear gap on track.</div>
-                <div class="traffic-driver-pills">
-                  <div>
-                    <span style="font-size: 8px; color: var(--text-muted);">EMERGES BEHIND:</span>
-                    <span id="simEmergesBehindPills" class="pills-container"></span>
-                  </div>
-                  <div style="margin-top: 4px;">
-                    <span style="font-size: 8px; color: var(--text-muted);">EMERGES AHEAD:</span>
-                    <span id="simEmergesAheadPills" class="pills-container"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Monte Carlo Stochastic Distribution -->
-              <div class="mc-distribution-box">
-                <div style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 3px;">MONTE CARLO RISK (2,500 RUNS)</div>
-                <div class="mc-distribution-row">
-                  <span>P10 (Ceil): <strong id="simP10">1:22.100</strong></span>
-                  <span>Exp (P50): <strong id="simP50">1:22.240</strong></span>
-                  <span>P90 (Risk): <strong id="simP90">1:22.420</strong></span>
-                </div>
-                <div style="font-size: 8px; color: var(--text-muted); margin-top: 3px;">Risk spread: <span id="simRiskScore">32.0s</span> • Jitter & SC sampled</div>
-              </div>
-
-              <!-- Teammate Benchmark & Dynamic ODI -->
-              <div class="sim-benchmark-footer">
-                <div id="simTeammateBenchmark" style="color: #a8a8c0; font-size: 8px;">Pace blended with #81 PIA (30% weight)</div>
-                <div id="simDynamicOdiInfo" style="color: #8888aa; font-size: 8px; margin-top: 2px;">Dynamic ODI: 0.28 (Low)</div>
-              </div>
-            </div>
-
-            <!-- Competitor Reactive Logic Accordion Section -->
-            <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; margin-top: 10px; margin-bottom: 4px;">COMPETITOR REACTIVE STRATEGIES</div>
-            
-            <div class="rival-reaction-row">
-              <span id="rival1Label" style="font-weight: 700;">#3 VER:</span>
-              <select id="rival1Reaction">
-                <option value="CoverUndercut" selected>Cover Undercut (Box +1 Lap)</option>
-                <option value="Standard">Standard Pace</option>
-                <option value="ExtendStint">Extend Stint (Long Run)</option>
-                <option value="AggressiveAttack">Aggressive Attack (Softs)</option>
-              </select>
-            </div>
-
-            <div class="rival-reaction-row">
-              <span id="rival2Label" style="font-weight: 700;">#16 LEC:</span>
-              <select id="rival2Reaction">
-                <option value="ExtendStint" selected>Extend Stint (Tyre Offset)</option>
-                <option value="CoverUndercut">Cover Undercut</option>
-                <option value="Standard">Standard Pace</option>
-                <option value="AggressiveAttack">Aggressive Attack</option>
-              </select>
+            <div class="rc-btn-group">
+              <button class="rc-toggle-btn active" id="rcBtnGreen" onclick="setTrackStatus('Green')">🟢 GREEN</button>
+              <button class="rc-toggle-btn" id="rcBtnVSC" onclick="setTrackStatus('VirtualSafetyCar')">🟡 VSC</button>
+              <button class="rc-toggle-btn" id="rcBtnSC" onclick="setTrackStatus('SafetyCar')">🟠 SAFETY CAR</button>
+              <button class="rc-toggle-btn" id="rcBtnRed" onclick="setTrackStatus('RedFlag')">🔴 RED FLAG</button>
             </div>
           </div>
 
-          <!-- Multi-Driver Outcome Results Container -->
-          <div id="multiSimResultsContainer" class="hidden">
-            <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
-              <span>PROJECTED FINISH POSITIONS & BATTLES</span>
+          <!-- 4. Key Strategy Impact KPI Cards -->
+          <div class="strategy-kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">PROJECTED FINISH</span>
+              <span id="kpiFinishPos" class="kpi-val" style="color: var(--color-purple)">P2</span>
+              <span id="kpiDeltaPos" class="kpi-delta pos-gain">▲ 1 POS</span>
             </div>
-            <div id="multiSimResultsContent"></div>
+            <div class="kpi-card">
+              <span class="kpi-label">GAP TO LEADER</span>
+              <span id="kpiGapLeader" class="kpi-val">+2.8s</span>
+              <span class="kpi-sub">EST. RACE DELTA</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">PIT EXIT WINDOW</span>
+              <span id="kpiTrafficRisk" class="kpi-val" style="color: var(--color-green)">CLEAN AIR</span>
+              <span id="kpiTrafficDesc" class="kpi-sub">+3.5s TO CAR AHEAD</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">UNDERCUT BENEFIT</span>
+              <span id="kpiUndercut" class="kpi-val" style="color: var(--color-cyan)">+1.4s</span>
+              <span class="kpi-sub">FRESH TYRE DELTA</span>
+            </div>
           </div>
 
-          <!-- Monte Carlo Strategy Optimizer Section -->
-          <div style="margin-top: 14px;">
-            <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none; display: flex; justify-content: space-between;">
-              <span>AI OPTIMAL & MONTE CARLO (5,000 RUNS)</span>
-              <button style="background: transparent; border: 1px solid var(--border-light); color: var(--color-purple); font-size: 9px; padding: 2px 6px; cursor: pointer;" onclick="runSimulation()">RE-CALCULATE</button>
-            </div>
-            <div id="alertBox" style="margin-top: 6px;"></div>
-            <div id="strategyResults">
-              <!-- Strategy Cards -->
-            </div>
-          </div>
-
-          <!-- Hidden inputs for backward compatibility -->
+          <!-- Hidden inputs for compatibility -->
           <input type="hidden" id="boundSessionKey" value="9000">
           <input type="hidden" id="currentLapInput" value="20">
-          <input type="hidden" id="tireAgeInput" value="15">
+          <input type="hidden" id="userPitLapInput" value="22">
+          <input type="hidden" id="userNewCompoundSelect" value="Hard">
           <select id="tireSelect" class="hidden"><option value="Medium">Medium</option><option value="Soft">Soft</option><option value="Hard">Hard</option></select>
           <select id="envSelect" class="hidden"><option value="Green">Green Flag</option></select>
         </div>

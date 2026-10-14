@@ -20,7 +20,7 @@ function renderLoop(now) {
   dvrState.lastFrameTime = now;
 
   // Advance In-Memory DVR Playback Ticker
-  if (dvrState.isPlaying && dvrState.telemetryBuffer.length > 0) {
+  if (dvrState.isPlaying && (dvrState.telemetryBuffer.length > 0 || baseDriversList.length > 0)) {
     dvrState.currentTimestamp += deltaTime * dvrState.playbackSpeed;
     if (dvrState.currentTimestamp > dvrState.endTime) {
       dvrState.currentTimestamp = dvrState.startTime; // Loop playback
@@ -28,20 +28,9 @@ function renderLoop(now) {
     applyDVRState(dvrState.currentTimestamp);
   }
 
-  // Advance Simulated Strategy Trajectory Dot and Progress
+  // Advance Simulated Strategy Trajectory Dot and Physical Vehicle Dynamics
   if (simOverlayState.isActive && simOverlayState.isPlaying) {
-    // Average lap duration ~88s -> normalized progress increment per second ~ 0.0114 at 1x
-    const lapAdvance = (deltaTime * 0.012 * simOverlayState.playbackSpeed);
-    simOverlayState.simulatedProgress += lapAdvance;
-    if (simOverlayState.simulatedProgress >= 1.0) {
-      simOverlayState.simulatedProgress %= 1.0;
-      simOverlayState.isCurrentlyBoxing = false; // Finished pit lap
-      if (simOverlayState.timeline.length > 0 && simOverlayState.activeTimelineIndex < simOverlayState.timeline.length - 1) {
-        simOverlayState.activeTimelineIndex++;
-        updateSimScrubberUI();
-        renderTimingTowerTable();
-      }
-    }
+    tickSimulatedDriver(deltaTime);
   }
 
   // Smooth Linear Interpolation towards targets with teleport guard
@@ -126,7 +115,7 @@ async function showDashboardView(sessionKey, location, sessionName) {
     );
   } else {
     runSimulation();
-    runSingleDriverSimulation();
+    runSingleDriverSimulation(false, false);
   }
 }
 
@@ -136,14 +125,8 @@ async function pollLiveState() {
     if (res.ok) {
       const state = await res.json();
       
-      const badge = document.getElementById('statusBadge');
-      if (badge) {
-        badge.innerText = `TRACK STATUS: ${state.track_status.toUpperCase()}`;
-        badge.className = 'status-badge ' + (
-          state.track_status === 'Green' ? 'status-green' :
-          state.track_status === 'Yellow' ? 'status-vsc' :
-          state.track_status === 'SafetyCar' ? 'status-sc' : 'status-red'
-        );
+      if (state.track_status) {
+        setTrackStatus(state.track_status);
       }
 
       const odiEl = document.getElementById('headerDynamicOdi');
@@ -152,7 +135,7 @@ async function pollLiveState() {
       }
     }
   } catch (err) {
-    console.error("Failed to poll live state:", err);
+    console.debug("Live state poll skipped/dormant:", err);
   }
 }
 
@@ -192,7 +175,7 @@ async function initSessionDVR(sessionKey) {
     buildSessionDVRBuffer([], "GREEN", 38.4, 24.1, [], []);
   }
   hideLoadingScreen();
-  dvrPause();
+  dvrPlay();
   updateDVRControlsUI();
 }
 

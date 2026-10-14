@@ -101,14 +101,37 @@ class CircularRadarEngine {
     ctx.textBaseline = 'middle';
     ctx.fillText('CIRCULAR RADAR', centerX, centerY - 18);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px JetBrains Mono';
     const followedDriver = lerpDriversMap.get(followedDriverNo);
-    ctx.fillText(followedDriver ? `#${followedDriver.driver_number} ${followedDriver.tla || getDriverTla(followedDriver)}` : 'LIVE DVR', centerX, centerY);
+    if (currentTrackStatus === 'SafetyCar') {
+      ctx.fillStyle = '#eab308';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText('⚠️ SAFETY CAR', centerX, centerY);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText('DELTA PACE ACTIVE', centerX, centerY + 18);
+    } else if (currentTrackStatus === 'VirtualSafetyCar') {
+      ctx.fillStyle = '#eab308';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText('🟡 VSC DELTA', centerX, centerY);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText('REDUCE SPEED 30%', centerX, centerY + 18);
+    } else if (currentTrackStatus === 'RedFlag') {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText('🔴 RED FLAG', centerX, centerY);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText('SESSION SUSPENDED', centerX, centerY + 18);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText(followedDriver ? `#${followedDriver.driver_number} ${followedDriver.tla || getDriverTla(followedDriver)}` : 'LIVE DVR', centerX, centerY);
 
-    ctx.fillStyle = 'var(--color-purple)';
-    ctx.font = '10px JetBrains Mono';
-    ctx.fillText(followedDriver ? `POS: P${followedDriver.position} | ${followedDriver.gap}` : 'SYNCED', centerX, centerY + 18);
+      ctx.fillStyle = 'var(--color-purple)';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText(followedDriver ? `POS: P${followedDriver.position} | ${followedDriver.gap}` : 'SYNCED', centerX, centerY + 18);
+    }
 
     // 5. Driver Projection on Circular Radar
     lerpDriversMap.forEach(driver => {
@@ -146,15 +169,20 @@ class CircularRadarEngine {
         }
 
         const simTheta = (2 * Math.PI * simOverlayState.simulatedProgress) - (Math.PI / 2);
-        const drawPx = centerX + (radarRadius * Math.cos(simTheta));
-        const drawPy = centerY + (radarRadius * Math.sin(simTheta));
-        const simLabelR = radarRadius + (Math.sin(simTheta) > 0 ? 14 : -14);
+        const inPit = (simOverlayState.status !== "RACING");
+        const effectiveR = inPit ? (radarRadius - 14) : radarRadius;
+        const drawPx = centerX + (effectiveR * Math.cos(simTheta));
+        const drawPy = centerY + (effectiveR * Math.sin(simTheta));
+        const simLabelR = effectiveR + (Math.sin(simTheta) > 0 ? 16 : -16);
         const drawLx = centerX + (simLabelR * Math.cos(simTheta));
         const drawLy = centerY + (simLabelR * Math.sin(simTheta));
 
+        const isBoxing = (simOverlayState.status === "IN_PIT_BOX");
+        const haloColor = isBoxing ? '#ef4444' : (inPit ? '#f59e0b' : '#06b6d4');
+
         ctx.beginPath();
         ctx.arc(drawPx, drawPy, 14, 0, Math.PI * 2);
-        ctx.strokeStyle = '#06b6d4';
+        ctx.strokeStyle = haloColor;
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -168,11 +196,22 @@ class CircularRadarEngine {
         ctx.fillStyle = '#ffffff';
         ctx.fill();
 
-        ctx.fillStyle = '#06b6d4';
+        ctx.fillStyle = haloColor;
         ctx.font = 'bold 10px JetBrains Mono';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${driver.tla || getDriverTla(driver)} SIM`, drawLx, drawLy);
+
+        let labelText = `${driver.tla || getDriverTla(driver)} SIM`;
+        if (isBoxing) {
+          const rem = Math.max(0, simOverlayState.pitStopSecondsRemaining).toFixed(1);
+          labelText = `🚨 BOX ${rem}s`;
+        } else if (simOverlayState.status === "ENTERING_PITS") {
+          labelText = `PIT LIMIT`;
+        } else if (simOverlayState.status === "EXITING_PITS") {
+          labelText = `PIT OUT`;
+        }
+
+        ctx.fillText(labelText, drawLx, drawLy);
         return;
       }
 
