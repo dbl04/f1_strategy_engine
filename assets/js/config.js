@@ -7,6 +7,51 @@ const TEAM_COLORS = {
   81: '#F47600', 87: '#9C9FA2'
 };
 
+// Canonical 2026 Grid Driver Metadata Reference
+const DRIVER_METADATA = {
+  1: { tla: "NOR", name: "Lando Norris", team: "McLaren" },
+  3: { tla: "VER", name: "Max Verstappen", team: "Red Bull Racing" },
+  5: { tla: "BOR", name: "Gabriel Bortoleto", team: "Audi" },
+  6: { tla: "HAD", name: "Isack Hadjar", team: "Red Bull Racing" },
+  10: { tla: "GAS", name: "Pierre Gasly", team: "Alpine" },
+  11: { tla: "PER", name: "Sergio Perez", team: "Cadillac" },
+  12: { tla: "ANT", name: "Kimi Antonelli", team: "Mercedes" },
+  14: { tla: "ALO", name: "Fernando Alonso", team: "Aston Martin" },
+  16: { tla: "LEC", name: "Charles Leclerc", team: "Ferrari" },
+  18: { tla: "STR", name: "Lance Stroll", team: "Aston Martin" },
+  23: { tla: "ALB", name: "Alexander Albon", team: "Williams" },
+  27: { tla: "HUL", name: "Nico Hulkenberg", team: "Audi" },
+  30: { tla: "LAW", name: "Liam Lawson", team: "Racing Bulls" },
+  31: { tla: "OCO", name: "Esteban Ocon", team: "Haas F1 Team" },
+  41: { tla: "LIN", name: "Arvid Lindblad", team: "Racing Bulls" },
+  43: { tla: "COL", name: "Franco Colapinto", team: "Alpine" },
+  44: { tla: "HAM", name: "Lewis Hamilton", team: "Ferrari" },
+  55: { tla: "SAI", name: "Carlos Sainz", team: "Williams" },
+  63: { tla: "RUS", name: "George Russell", team: "Mercedes" },
+  77: { tla: "BOT", name: "Valtteri Bottas", team: "Cadillac" },
+  81: { tla: "PIA", name: "Oscar Piastri", team: "McLaren" },
+  87: { tla: "BEA", name: "Oliver Bearman", team: "Haas F1 Team" },
+};
+
+function getDriverTla(driver) {
+  if (!driver) return "DRV";
+  if (driver.tla && driver.tla !== "undefined") return driver.tla;
+  if (driver.name_acronym && driver.name_acronym !== "undefined") return driver.name_acronym;
+  const dNo = Number(driver.driver_number);
+  if (DRIVER_METADATA[dNo]) return DRIVER_METADATA[dNo].tla;
+  if (driver.broadcast_name) return driver.broadcast_name.substring(0, 3).toUpperCase();
+  return `#${dNo || '?'}`;
+}
+
+function getDriverTeam(driver) {
+  if (!driver) return "Formula 1";
+  if (driver.team && driver.team !== "undefined") return driver.team;
+  if (driver.team_name && driver.team_name !== "undefined") return driver.team_name;
+  const dNo = Number(driver.driver_number);
+  if (DRIVER_METADATA[dNo]) return DRIVER_METADATA[dNo].team;
+  return "Formula 1";
+}
+
 // Helper: Map (x,y) to normalized track progress s in [0.0, 1.0]
 function getLapProgressForCoords(x, y) {
   if (!refTrackPoints || refTrackPoints.length === 0) return 0;

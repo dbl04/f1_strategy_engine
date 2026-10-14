@@ -187,7 +187,7 @@ function activateSimulationTrajectory(data) {
 
   // Update Banner UI
   const dEl = document.getElementById('simBannerDriver');
-  if (dEl) dEl.innerText = `#${data.driver_number} ${data.driver_tla}`;
+  if (dEl) dEl.innerText = `#${data.driver_number} ${data.driver_tla || getDriverTla({ driver_number: data.driver_number })}`;
   const pEl = document.getElementById('simBannerPlan');
   if (pEl) {
     pEl.innerText = simOverlayState.isCurrentlyBoxing 

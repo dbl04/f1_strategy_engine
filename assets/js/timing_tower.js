@@ -36,7 +36,10 @@ function renderTimingTowerTable() {
     if (d.driver_number === followedDriverNo) tr.className = 'followed-row';
     if (d.isSimRow) tr.classList.add('sim-row-active');
 
-    tr.onclick = (e) => selectFollowedDriver(d.driver_number, d.tla, d.compound, d.tyre_age, d.pit_stop_count, d.team, e);
+    const driverTla = d.tla || getDriverTla(d);
+    const driverTeam = d.team || getDriverTeam(d);
+
+    tr.onclick = (e) => selectFollowedDriver(d.driver_number, driverTla, d.compound, d.tyre_age, d.pit_stop_count, driverTeam, e);
 
     const compInfo = getCompoundInfo(d.compound);
     const teamColor = TEAM_COLORS[d.driver_number] || '#a855f7';
@@ -60,7 +63,7 @@ function renderTimingTowerTable() {
       <td>
         <div class="driver-cell">
           <span class="team-stripe" style="background: ${teamColor};"></span>
-          <strong>${d.tla}</strong>
+          <strong>${driverTla}</strong>
         </div>
       </td>
       <td style="font-size: 10px;">${d.gap}</td>
@@ -78,7 +81,8 @@ function renderTimingTowerTable() {
 
 function selectFollowedDriver(dNo, tla, compound, age, pits, team, evt) {
   followedDriverNo = dNo;
-  document.getElementById('followedDriverBadge').innerText = `#${dNo} ${tla}`;
+  const safeTla = (tla && tla !== "undefined") ? tla : getDriverTla({ driver_number: dNo });
+  document.getElementById('followedDriverBadge').innerText = `#${dNo} ${safeTla}`;
   const teleDriver = document.getElementById('telemetryDriverNo');
   if (teleDriver) teleDriver.value = dNo;
 
@@ -87,7 +91,7 @@ function selectFollowedDriver(dNo, tla, compound, age, pits, team, evt) {
 
   // Update Hero Card in Strategy Tab
   const heroTitle = document.getElementById('heroDriverTitle');
-  if (heroTitle) heroTitle.innerText = `#${dNo} ${tla}`;
+  if (heroTitle) heroTitle.innerText = `#${dNo} ${safeTla}`;
 
   const heroStripe = document.getElementById('heroTeamStripe');
   if (heroStripe) heroStripe.style.background = teamColor;

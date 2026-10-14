@@ -196,10 +196,13 @@ function buildSessionDVRBuffer(initialDrivers, trackStatus, trackTemp, airTemp, 
       maxSessionLaps = timelineLaps.length;
     }
 
+    const resolvedTla = getDriverTla(d);
+    const resolvedTeam = getDriverTeam(d);
+
     return {
       driver_number: dNo,
-      tla: d.tla,
-      team: d.team,
+      tla: resolvedTla,
+      team: resolvedTeam,
       gridSlotProgress: (d.initialProgress !== undefined) ? d.initialProgress : gridSlotProgress,
       timelineLaps: timelineLaps,
       stints: dStints,
@@ -225,8 +228,8 @@ function buildSessionDVRBuffer(initialDrivers, trackStatus, trackTemp, airTemp, 
     const coords = getCoordsForProgress(d.gridSlotProgress);
     lerpDriversMap.set(d.driver_number, {
       driver_number: d.driver_number,
-      tla: d.tla,
-      team: d.team,
+      tla: d.tla || getDriverTla(d),
+      team: d.team || getDriverTeam(d),
       position: idx + 1,
       gap: idx === 0 ? "LEADER" : `+${(idx * 1.5).toFixed(1)}s`,
       interval: idx === 0 ? "―" : `+1.5s`,

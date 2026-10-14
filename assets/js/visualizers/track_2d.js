@@ -44,9 +44,9 @@ class OpenF1RadarEngine {
       tooltip.innerHTML = `
         <div style="font-weight: 800; color: #fff; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
           <span class="team-stripe" style="background: ${TEAM_COLORS[closest.driver_number] || '#a855f7'}; height: 10px;"></span>
-          #${closest.driver_number} ${closest.tla} • P${closest.position}
+          #${closest.driver_number} ${closest.tla || getDriverTla(closest)} • P${closest.position}
         </div>
-        <div style="color: var(--text-muted); font-size: 9px;">${closest.team || 'Formula 1'}</div>
+        <div style="color: var(--text-muted); font-size: 9px;">${closest.team || getDriverTeam(closest)}</div>
         <div style="margin-top: 4px; display: flex; gap: 4px; align-items: center;">
           <span class="compound-tag ${comp.cssClass}" style="font-size: 8px;">${comp.tag}</span>
           <span>L${closest.tyre_age || 0}</span>
@@ -255,7 +255,7 @@ class OpenF1RadarEngine {
           // Ghost Car Label
           ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
           ctx.font = '8px JetBrains Mono';
-          ctx.fillText(`${driver.tla} (LIVE)`, px + 8, py - 6);
+          ctx.fillText(`${driver.tla || getDriverTla(driver)} (LIVE)`, px + 8, py - 6);
         }
 
         // Map simulated progress to track coordinates
@@ -316,7 +316,7 @@ class OpenF1RadarEngine {
 
           ctx.fillStyle = '#06b6d4';
           ctx.font = 'bold 9px JetBrains Mono';
-          ctx.fillText(`${driver.tla} SIM`, badgeX + 3, badgeY + 9);
+          ctx.fillText(`${driver.tla || getDriverTla(driver)} SIM`, badgeX + 3, badgeY + 9);
         }
         return;
       }
@@ -364,7 +364,7 @@ class OpenF1RadarEngine {
 
       ctx.fillStyle = isFollowed ? '#a855f7' : '#ffffff';
       ctx.font = 'bold 9px JetBrains Mono';
-      ctx.fillText(`${driver.tla}`, badgeX + 3, badgeY + 9);
+      ctx.fillText(`${driver.tla || getDriverTla(driver)}`, badgeX + 3, badgeY + 9);
 
       // 2026 Overtake Mode Pip (green indicator when Manual Override Mode active)
       if (driver.drs_active) {

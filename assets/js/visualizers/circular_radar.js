@@ -104,7 +104,7 @@ class CircularRadarEngine {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 12px JetBrains Mono';
     const followedDriver = lerpDriversMap.get(followedDriverNo);
-    ctx.fillText(followedDriver ? `#${followedDriver.driver_number} ${followedDriver.tla}` : 'LIVE DVR', centerX, centerY);
+    ctx.fillText(followedDriver ? `#${followedDriver.driver_number} ${followedDriver.tla || getDriverTla(followedDriver)}` : 'LIVE DVR', centerX, centerY);
 
     ctx.fillStyle = 'var(--color-purple)';
     ctx.font = '10px JetBrains Mono';
@@ -172,7 +172,7 @@ class CircularRadarEngine {
         ctx.font = 'bold 10px JetBrains Mono';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${driver.tla} SIM`, drawLx, drawLy);
+        ctx.fillText(`${driver.tla || getDriverTla(driver)} SIM`, drawLx, drawLy);
         return;
       }
 
@@ -206,7 +206,7 @@ class CircularRadarEngine {
       ctx.font = isFollowed ? 'bold 10px JetBrains Mono' : '9px JetBrains Mono';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${driver.tla}`, lx, ly);
+      ctx.fillText(`${driver.tla || getDriverTla(driver)}`, lx, ly);
     });
   }
 }
