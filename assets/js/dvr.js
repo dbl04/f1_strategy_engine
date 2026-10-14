@@ -17,21 +17,33 @@ const gpsTimelinesByDriver = new Map();
 
 function dvrPlay() {
   dvrState.isPlaying = true;
+  if (typeof simOverlayState !== 'undefined') {
+    simOverlayState.isPlaying = true;
+  }
   updateDVRControlsUI();
 }
 
 function dvrPause() {
   dvrState.isPlaying = false;
+  if (typeof simOverlayState !== 'undefined') {
+    simOverlayState.isPlaying = false;
+  }
   updateDVRControlsUI();
 }
 
 function dvrTogglePlay() {
   dvrState.isPlaying = !dvrState.isPlaying;
+  if (typeof simOverlayState !== 'undefined') {
+    simOverlayState.isPlaying = dvrState.isPlaying;
+  }
   updateDVRControlsUI();
 }
 
 function dvrSetSpeed(multiplier) {
   dvrState.playbackSpeed = multiplier;
+  if (typeof simOverlayState !== 'undefined') {
+    simOverlayState.playbackSpeed = multiplier;
+  }
   [1, 2, 5, 10].forEach(spd => {
     const btn = document.getElementById(`dvrSpeed${spd}`);
     if (btn) btn.classList.toggle('active', spd === multiplier);

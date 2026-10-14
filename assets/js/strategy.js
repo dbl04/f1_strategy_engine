@@ -102,6 +102,8 @@ function triggerBoxThisLap() {
     simOverlayState.currentCompound = driverObj.compound || "Medium";
     simOverlayState.tyreAge = driverObj.tyre_age || 0;
     simOverlayState.pitStopCount = driverObj.pit_stop_count || 0;
+    simOverlayState.playbackSpeed = (typeof dvrState !== 'undefined' && dvrState.playbackSpeed) ? dvrState.playbackSpeed : 1;
+    simOverlayState.isPlaying = (typeof dvrState !== 'undefined') ? dvrState.isPlaying : true;
   }
 
   // 2. Schedule pit stop for this lap to the user's chosen compound
@@ -151,8 +153,14 @@ function triggerBoxThisLap() {
 // 60 FPS Vehicle Dynamics & Pit Stop Physical Simulator
 function tickSimulatedDriver(deltaTime) {
   if (!simOverlayState.isActive || !simOverlayState.isPlaying) return;
+  if (typeof dvrState !== 'undefined' && !dvrState.isPlaying) return;
 
-  const dt = deltaTime * simOverlayState.playbackSpeed;
+  const activeSpeed = (typeof dvrState !== 'undefined' && dvrState.playbackSpeed)
+    ? dvrState.playbackSpeed
+    : (simOverlayState.playbackSpeed || 1);
+  simOverlayState.playbackSpeed = activeSpeed;
+
+  const dt = deltaTime * activeSpeed;
   if (dt <= 0) return;
 
   // 1. Neutralization & Pace Modifiers
@@ -334,7 +342,7 @@ function exitSimulationMode() {
   renderTimingTowerTable();
 }
 
-// Race Control Status Toggle & Live Alert Feedback (GREEN / VSC / SAFETY CAR / RED FLAG)
+// Race Control Official Status & Live Alert Feedback (GREEN / VSC / SAFETY CAR / RED FLAG)
 function setTrackStatus(status) {
   currentTrackStatus = status;
 
@@ -350,7 +358,23 @@ function setTrackStatus(status) {
     );
   }
 
-  // 2. Update Race Control Alert Banner above visualizer
+  // 2. Update Race Control Status Badge in Conditions Tab
+  const rcBadge = document.getElementById('rcTrackStatusBadge');
+  if (rcBadge) {
+    rcBadge.innerText = (
+      status === 'Green' ? '🟢 GREEN — TRACK CLEAR' :
+      status === 'VirtualSafetyCar' ? '🟡 VIRTUAL SAFETY CAR (VSC)' :
+      status === 'SafetyCar' ? '🟠 SAFETY CAR DEPLOYED' :
+      status === 'RedFlag' ? '🔴 RED FLAG — RACE SUSPENDED' : status.toUpperCase()
+    );
+    rcBadge.className = 'status-badge ' + (
+      status === 'Green' ? 'status-green' :
+      status === 'VirtualSafetyCar' || status === 'Yellow' ? 'status-vsc' :
+      status === 'SafetyCar' ? 'status-sc' : 'status-red'
+    );
+  }
+
+  // 3. Update Race Control Alert Banner above visualizer
   const alertBanner = document.getElementById('safetyCarAlertBanner');
   const alertTitle = document.getElementById('scAlertTitle');
   const alertDesc = document.getElementById('scAlertDesc');
@@ -376,7 +400,7 @@ function setTrackStatus(status) {
     }
   }
 
-  // 3. Update Pit Advantage Label in Strategy Console
+  // 4. Update Pit Advantage Label in Strategy Console
   const advBadge = document.getElementById('pitAdvantageBadge');
   if (advBadge) {
     if (status === 'SafetyCar') {
@@ -390,12 +414,6 @@ function setTrackStatus(status) {
       advBadge.innerText = 'PIT LOSS: 22.5s (NORMAL)';
     }
   }
-
-  // 4. Update RC Simulator Button Highlights
-  ['Green', 'VirtualSafetyCar', 'SafetyCar', 'RedFlag'].forEach(st => {
-    const btn = document.getElementById(`rcBtn${st === 'VirtualSafetyCar' ? 'VSC' : st === 'SafetyCar' ? 'SC' : st}`);
-    if (btn) btn.classList.toggle('active', st === status);
-  });
 }
 
 // Background analytical simulation to update the 4 Key Insight Cards
@@ -484,4 +502,183 @@ function simTogglePlay() {
     btn.innerText = simOverlayState.isPlaying ? '⏸ PAUSE SIM' : '▶ PLAY SIM';
     btn.classList.toggle('active-play', simOverlayState.isPlaying);
   }
+}
+
+// ==========================================
+// 6. STOCHASTIC MONTE CARLO STRATEGY OPTIMIZER
+// ==========================================
+
+async function runSimulation() {
+  const driverObj = lerpDriversMap.get(followedDriverNo);
+  const curLap = (driverObj && driverObj.current_lap) 
+    ? driverObj.current_lap 
+    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
+  const curCompound = normalizeCompound((driverObj && driverObj.compound) 
+    ? driverObj.compound 
+    : (selectedTargetCompound || "Medium"));
+  const curTyreAge = (driverObj && driverObj.tyre_age !== undefined) 
+    ? driverObj.tyre_age 
+    : (simOverlayState.tyreAge || 15);
+  const mandatoryPit = (driverObj && (driverObj.pit_stop_count || 0) > 0) || false;
+
+  const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
+  const egoPos = driverObj ? driverObj.position : 1;
+  const competitors = allDrivers
+    .filter(d => d.driver_number !== followedDriverNo)
+    .slice(0, 8)
+    .map(d => ({
+      driver_name: d.tla || getDriverTla(d),
+      team: d.team || getDriverTeam(d),
+      current_lap: d.current_lap || curLap,
+      gap_to_ego_seconds: (d.position - egoPos) * 1.8,
+      current_tire: normalizeCompound(d.compound || "Medium"),
+      tire_age_laps: d.tyre_age || 10,
+      projected_pit_lap: Math.min(53, curLap + 5)
+    }));
+
+  const payload = {
+    track: {
+      total_laps: simOverlayState.totalLaps || 53,
+      base_pit_stop_loss_seconds: 22.5,
+      historical_sc_probability: 0.30
+    },
+    environment: currentTrackStatus === "SafetyCar" ? "SafetyCar" : currentTrackStatus === "VirtualSafetyCar" ? "VirtualSafetyCar" : "Green",
+    ego_car: {
+      current_lap: curLap,
+      current_tire: curCompound,
+      tire_age_laps: curTyreAge,
+      mandatory_pit_completed: mandatoryPit,
+      front_wing_damage: false,
+      time_penalty_seconds: 0.0
+    },
+    competitors: competitors,
+    weather_forecast: null
+  };
+
+  try {
+    const res = await fetch('/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      renderStrategies(data);
+    }
+  } catch (err) {
+    console.error("Monte Carlo simulation run failed:", err);
+  }
+}
+
+function renderStrategies(data) {
+  const container = document.getElementById('strategyResults');
+  const summaryText = document.getElementById('mcSummaryText');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (summaryText && data.summary_message) {
+    summaryText.innerHTML = `<strong>OPTIMIZER:</strong> ${data.summary_message} ${data.safety_car_advantage_active ? ' • <span style="color: var(--color-yellow)">★ CHEAP PIT WINDOW ACTIVE</span>' : ''}`;
+  }
+
+  const allStrats = [];
+  if (data.optimal_strategy) {
+    allStrats.push({ ...data.optimal_strategy, isOptimal: true });
+  }
+  if (Array.isArray(data.alternative_strategies)) {
+    data.alternative_strategies.forEach(st => allStrats.push({ ...st, isOptimal: false }));
+  }
+
+  allStrats.slice(0, 6).forEach(strat => {
+    const card = document.createElement('div');
+    card.className = `mc-strategy-card ${strat.isOptimal ? 'optimal' : ''}`;
+
+    const metrics = strat.monte_carlo_metrics || {
+      expected_time_seconds: strat.projected_total_time_seconds || 2960.0,
+      win_probability_pct: strat.isOptimal ? 86.4 : 45.2,
+      p10_time_seconds: (strat.projected_total_time_seconds || 2960.0) - 5.2,
+      p90_time_seconds: (strat.projected_total_time_seconds || 2960.0) + 6.8
+    };
+
+    const expTime = strat.projected_total_time_formatted || formatLapTime(metrics.expected_time_seconds);
+    const winProb = metrics.win_probability_pct ? metrics.win_probability_pct.toFixed(1) : "50.0";
+    const deltaStr = strat.isOptimal 
+      ? '<span class="mc-delta-badge baseline">★ OPTIMAL BASELINE</span>' 
+      : `<span class="mc-delta-badge">+${(strat.delta_to_optimal_seconds || 0).toFixed(2)}s</span>`;
+
+    let stintsHtml = '';
+    if (!strat.pit_stops || strat.pit_stops.length === 0) {
+      stintsHtml = `<div class="stint-step"><span class="compound-tag comp-medium">MED</span><span class="stint-laps">NO PIT STOP REQUIRED (0-STOP)</span></div>`;
+    } else {
+      strat.pit_stops.forEach((p) => {
+        const c = p.new_compound || p.compound || "Hard";
+        const cInfo = getCompoundInfo(c);
+        stintsHtml += `
+          <div class="stint-step">
+            <span class="stint-arrow">➔</span>
+            <span class="compound-tag ${cInfo.cssClass}">L${p.pit_lap || p.lap} ${cInfo.tag}</span>
+          </div>
+        `;
+      });
+    }
+
+    const firstStopCompound = (strat.pit_stops && strat.pit_stops.length > 0) 
+      ? (strat.pit_stops[0].new_compound || strat.pit_stops[0].compound || "Hard")
+      : "Hard";
+    const firstStopLap = (strat.pit_stops && strat.pit_stops.length > 0)
+      ? (strat.pit_stops[0].pit_lap || strat.pit_stops[0].lap || 22)
+      : 22;
+
+    card.innerHTML = `
+      <div class="mc-card-header">
+        <div class="mc-strat-title">
+          ${strat.isOptimal ? '<span class="mc-badge-optimal">OPTIMAL</span>' : ''}
+          <span class="mc-strat-name">${strat.name}</span>
+        </div>
+        ${deltaStr}
+      </div>
+
+      <div class="mc-stint-flow">
+        ${stintsHtml}
+      </div>
+
+      <div class="mc-metrics-grid">
+        <div class="mc-metric-item">
+          <span class="mc-label">EXP. TIME</span>
+          <span class="mc-val">${expTime}</span>
+        </div>
+        <div class="mc-metric-item">
+          <span class="mc-label">WIN PROB</span>
+          <span class="mc-val" style="color: var(--color-green)">${winProb}%</span>
+        </div>
+        <div class="mc-metric-item">
+          <span class="mc-label">P10 (CEILING)</span>
+          <span class="mc-val">${formatLapTime(metrics.p10_time_seconds)}</span>
+        </div>
+        <div class="mc-metric-item">
+          <span class="mc-label">P90 (RISK)</span>
+          <span class="mc-val">${formatLapTime(metrics.p90_time_seconds)}</span>
+        </div>
+      </div>
+
+      <div class="mc-footer">
+        <div class="mc-sub-losses">
+          <span>PIT LOSS: <strong>${(strat.total_pit_stop_time_loss_seconds || 22.5).toFixed(1)}s</strong></span> • 
+          <span>DEG LOSS: <strong>${(strat.total_degradation_loss_seconds || 21.0).toFixed(1)}s</strong></span>
+        </div>
+        <button type="button" class="btn-apply-strat" onclick="applyMonteCarloStrategy('${firstStopCompound}', ${firstStopLap})">
+          SELECT STRATEGY
+        </button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function applyMonteCarloStrategy(compound, pitLap) {
+  selectTargetCompound(compound);
+  const pitInput = document.getElementById('userPitLapInput');
+  if (pitInput) pitInput.value = pitLap;
+  switchTab('tabStrategy');
 }

@@ -295,72 +295,7 @@
   color: #ffffff;
 }
 
-/* 3. Race Control Simulator Card */
-.rc-simulator-card {
-  background: rgba(14, 14, 22, 0.7);
-  border: 1px solid var(--border-dark);
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-}
-
-.rc-sim-header {
-  font-size: 8px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-}
-
-.rc-btn-group {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-}
-
-.rc-toggle-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 700;
-  padding: 5px 2px;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.12s ease;
-}
-.rc-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-.rc-toggle-btn.active {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.4);
-}
-#rcBtnGreen.active {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: var(--color-green);
-  color: var(--color-green);
-}
-#rcBtnVSC.active {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: var(--color-yellow);
-  color: var(--color-yellow);
-}
-#rcBtnSC.active {
-  background: rgba(245, 158, 11, 0.3);
-  border-color: #f59e0b;
-  color: #fef08a;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
-}
-#rcBtnRed.active {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: var(--color-red);
-  color: var(--color-red);
-}
-
-/* 4. Strategy KPI Grid */
+/* 3. Strategy KPI Grid */
 .strategy-kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -453,4 +388,262 @@
   font-size: 9px;
   font-weight: 700;
   opacity: 0.95;
+}
+
+/* ==========================================
+   MONTE CARLO STRATEGY OPTIMIZATION STYLES
+   ========================================== */
+
+.monte-carlo-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.mc-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.mc-subtitle {
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.mc-recalc-btn {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 4px;
+  color: var(--color-purple);
+  font-size: 8px;
+  font-weight: 800;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mc-recalc-btn:hover {
+  background: rgba(168, 85, 247, 0.3);
+  color: #ffffff;
+}
+
+.mc-summary-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.1) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mc-banner-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mc-banner-text {
+  font-size: 9px;
+  color: #ffffff;
+  line-height: 1.4;
+}
+
+.mc-strategies-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mc-strategy-card {
+  background: linear-gradient(145deg, rgba(20, 20, 32, 0.85) 0%, rgba(12, 12, 20, 0.95) 100%);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+
+.mc-strategy-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.mc-strategy-card.optimal {
+  border-color: var(--color-purple);
+  background: linear-gradient(145deg, rgba(30, 22, 48, 0.9) 0%, rgba(14, 11, 24, 0.95) 100%);
+  box-shadow: 0 4px 18px rgba(168, 85, 247, 0.25);
+}
+
+.mc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mc-strat-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc-badge-optimal {
+  background: var(--color-purple);
+  color: #000000;
+  font-weight: 900;
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+}
+
+.mc-strat-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.mc-delta-badge {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--color-yellow);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.mc-delta-badge.baseline {
+  color: var(--color-green);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.mc-stint-flow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+
+.stint-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stint-arrow {
+  color: var(--text-dim);
+  font-size: 9px;
+}
+
+.stint-laps {
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.mc-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.mc-metric-item {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-label {
+  font-size: 7px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.mc-val {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.mc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 6px;
+}
+
+.mc-sub-losses {
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.btn-apply-strat {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid var(--color-purple);
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+}
+
+.btn-apply-strat:hover {
+  background: var(--color-purple);
+  color: #000000;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+/* Official OpenF1 Race Control Incident Feed */
+.rc-events-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+
+.rc-log-item {
+  background: rgba(20, 20, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rc-log-time {
+  font-size: 8px;
+  color: var(--color-cyan);
+  font-weight: 700;
+  min-width: 45px;
+}
+
+.rc-log-flag {
+  font-size: 11px;
+}
+
+.rc-log-msg {
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1.25;
 }

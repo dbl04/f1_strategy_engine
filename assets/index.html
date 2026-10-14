@@ -174,6 +174,7 @@
       <div class="panel right-pitwall-panel">
         <div class="tab-bar">
           <button class="tab-btn active" onclick="switchTab('tabStrategy')">PIT DECISION</button>
+          <button class="tab-btn" onclick="switchTab('tabMonteCarlo')">MONTE CARLO</button>
           <button class="tab-btn" onclick="switchTab('tabTelemetry')">TELEMETRY</button>
           <button class="tab-btn" onclick="switchTab('tabRaceControl')">CONDITIONS</button>
         </div>
@@ -255,20 +256,7 @@
             </button>
           </div>
 
-          <!-- 3. Race Control Simulator Bar (Test SC / VSC Effects) -->
-          <div class="rc-simulator-card">
-            <div class="rc-sim-header">
-              <span>RACE CONTROL CONDITION SIMULATOR</span>
-            </div>
-            <div class="rc-btn-group">
-              <button class="rc-toggle-btn active" id="rcBtnGreen" onclick="setTrackStatus('Green')">🟢 GREEN</button>
-              <button class="rc-toggle-btn" id="rcBtnVSC" onclick="setTrackStatus('VirtualSafetyCar')">🟡 VSC</button>
-              <button class="rc-toggle-btn" id="rcBtnSC" onclick="setTrackStatus('SafetyCar')">🟠 SAFETY CAR</button>
-              <button class="rc-toggle-btn" id="rcBtnRed" onclick="setTrackStatus('RedFlag')">🔴 RED FLAG</button>
-            </div>
-          </div>
-
-          <!-- 4. Key Strategy Impact KPI Cards -->
+          <!-- 3. Key Strategy Impact KPI Cards -->
           <div class="strategy-kpi-grid">
             <div class="kpi-card">
               <span class="kpi-label">PROJECTED FINISH</span>
@@ -301,7 +289,27 @@
           <select id="envSelect" class="hidden"><option value="Green">Green Flag</option></select>
         </div>
 
-        <!-- TAB 2: TELEMETRY -->
+        <!-- TAB 2: MONTE CARLO STRATEGY SIMULATIONS -->
+        <div id="tabMonteCarlo" class="tab-content">
+          <div class="monte-carlo-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="mc-title">STOCHASTIC MONTE CARLO OPTIMIZER</span>
+              <button class="mc-recalc-btn" onclick="runSimulation()">🔄 RECALCULATE</button>
+            </div>
+            <div class="mc-subtitle">10,000 stochastic race iterations across tire wear curves, rival reactions & hazard windows</div>
+          </div>
+
+          <div id="mcSummaryBanner" class="mc-summary-banner">
+            <span class="mc-banner-icon">🏁</span>
+            <div id="mcSummaryText" class="mc-banner-text">Evaluating optimal multi-stint strategies for current race state...</div>
+          </div>
+
+          <div id="strategyResults" class="mc-strategies-container">
+            <!-- Dynamically populated with optimal and alternative strategies -->
+          </div>
+        </div>
+
+        <!-- TAB 3: TELEMETRY -->
         <div id="tabTelemetry" class="tab-content">
           <div class="control-group">
             <label>Followed Driver Number</label>
@@ -337,15 +345,17 @@
           </div>
         </div>
 
-        <!-- TAB 3: RACE CONTROL -->
+        <!-- TAB 4: RACE CONTROL & TRACK CONDITIONS -->
         <div id="tabRaceControl" class="tab-content">
           <div class="control-group">
-            <label>Live OpenF1 Race Control Flag</label>
-            <input type="text" id="rcFlagDisplay" value="GREEN - TRACK CLEAR" disabled>
+            <label>Official OpenF1 Track Status</label>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+              <span id="rcTrackStatusBadge" class="status-badge status-green">GREEN - TRACK CLEAR</span>
+            </div>
           </div>
 
           <div class="control-group" style="margin-top: 14px;">
-            <label>Live Weather Telemetry</label>
+            <label>Live OpenF1 Weather Telemetry</label>
             <div class="input-row">
               <div>
                 <label>Track Temp (°C)</label>
@@ -354,6 +364,18 @@
               <div>
                 <label>Air Temp (°C)</label>
                 <input type="number" id="rcAirTemp" value="24.1" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
+              <span>OFFICIAL RACE CONTROL INCIDENT FEED</span>
+            </div>
+            <div id="rcEventsLog" class="rc-events-log">
+              <div class="rc-log-item">
+                <span class="rc-log-flag">🟢</span>
+                <span class="rc-log-msg">TRACK CLEAR — GREEN FLAG DEPLOYED</span>
               </div>
             </div>
           </div>

@@ -29,7 +29,7 @@ function renderLoop(now) {
   }
 
   // Advance Simulated Strategy Trajectory Dot and Physical Vehicle Dynamics
-  if (simOverlayState.isActive && simOverlayState.isPlaying) {
+  if (simOverlayState.isActive && simOverlayState.isPlaying && dvrState.isPlaying) {
     tickSimulatedDriver(deltaTime);
   }
 
@@ -117,6 +117,10 @@ async function showDashboardView(sessionKey, location, sessionName) {
     runSimulation();
     runSingleDriverSimulation(false, false);
   }
+
+  // Start periodic live state polling from OpenF1 (Shielded proxy)
+  if (networkPollInterval) clearInterval(networkPollInterval);
+  networkPollInterval = setInterval(pollLiveState, 4000);
 }
 
 async function pollLiveState() {
@@ -145,15 +149,37 @@ async function initSessionDVR(sessionKey) {
     const driversRes = await fetch(`/api/openf1/drivers?session_key=${sessionKey}`);
     const drivers = driversRes.ok ? await driversRes.json() : [];
 
-    updateLoadingProgress(45, "Retrieving Real Session Laps & Timing Records...");
+    updateLoadingProgress(40, "Retrieving Real Session Laps & Timing Records...");
     const lapsRes = await fetch(`/api/openf1/session-laps?session_key=${sessionKey}`);
     const rawLaps = lapsRes.ok ? await lapsRes.json() : [];
 
-    updateLoadingProgress(65, "Acquiring Stint Compounds & Degradation Metadata...");
+    updateLoadingProgress(60, "Acquiring Stint Compounds & Degradation Metadata...");
     const stintsRes = await fetch(`/api/openf1/stints?session_key=${sessionKey}`);
     const rawStints = stintsRes.ok ? await stintsRes.json() : [];
 
-    updateLoadingProgress(85, "Synchronizing Race Control & Weather Feeds...");
+    updateLoadingProgress(75, "Acquiring Official OpenF1 Race Control Incidents...");
+    let initialTrackStatus = "Green";
+    try {
+      const rcRes = await fetch(`/api/openf1/race_control?session_key=${sessionKey}`);
+      if (rcRes.ok) {
+        const rawRC = await rcRes.json();
+        renderRaceControlEvents(rawRC);
+        if (rawRC && rawRC.length > 0) {
+          const lastActive = rawRC.slice().reverse().find(rc => rc.flag || rc.category === "SafetyCar" || rc.message?.toUpperCase().includes("SAFETY CAR"));
+          if (lastActive) {
+            const f = (lastActive.flag || lastActive.message || "").toUpperCase();
+            if (f.includes("VIRTUAL") || f.includes("VSC")) initialTrackStatus = "VirtualSafetyCar";
+            else if (f.includes("SAFETY CAR")) initialTrackStatus = "SafetyCar";
+            else if (f.includes("RED")) initialTrackStatus = "RedFlag";
+            else if (f.includes("YELLOW")) initialTrackStatus = "VirtualSafetyCar";
+          }
+        }
+      }
+    } catch (e) {
+      console.debug("Race control fetch skipped:", e);
+    }
+
+    updateLoadingProgress(88, "Synchronizing Ambient & Track Weather Feeds...");
     const weatherRes = await fetch(`/api/openf1/weather?session_key=${sessionKey}`);
     let trackTemp = 38.4, airTemp = 24.1;
     if (weatherRes.ok) {
@@ -169,7 +195,8 @@ async function initSessionDVR(sessionKey) {
     const airTempEl = document.getElementById('headerAirTemp');
     if (airTempEl) airTempEl.innerText = `${airTemp.toFixed(1)}°C`;
 
-    buildSessionDVRBuffer(drivers, "GREEN", trackTemp, airTemp, rawLaps, rawStints);
+    buildSessionDVRBuffer(drivers, initialTrackStatus, trackTemp, airTemp, rawLaps, rawStints);
+    setTrackStatus(initialTrackStatus);
   } catch (e) {
     console.error("Failed to initialize session DVR buffer", e);
     buildSessionDVRBuffer([], "GREEN", 38.4, 24.1, [], []);
@@ -177,6 +204,43 @@ async function initSessionDVR(sessionKey) {
   hideLoadingScreen();
   dvrPlay();
   updateDVRControlsUI();
+}
+
+function renderRaceControlEvents(events) {
+  const container = document.getElementById('rcEventsLog');
+  if (!container) return;
+  if (!events || events.length === 0) {
+    container.innerHTML = `
+      <div class="rc-log-item">
+        <span class="rc-log-flag">🟢</span>
+        <span class="rc-log-msg">TRACK CLEAR — ALL SECTORS GREEN</span>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  events.slice().reverse().forEach(ev => {
+    let flagIcon = '⚪';
+    const flag = (ev.flag || ev.category || "").toUpperCase();
+    const msg = (ev.message || "").toUpperCase();
+    if (flag.includes("GREEN") || msg.includes("CLEAR")) flagIcon = '🟢';
+    else if (flag.includes("YELLOW") || msg.includes("YELLOW")) flagIcon = '🟡';
+    else if (flag.includes("RED") || msg.includes("RED")) flagIcon = '🔴';
+    else if (flag.includes("SAFETY") || msg.includes("SAFETY")) flagIcon = '🟠';
+    else if (flag.includes("BLUE")) flagIcon = '🔵';
+    else if (flag.includes("CHEQUERED")) flagIcon = '🏁';
+
+    const timeStr = ev.date ? ev.date.substring(11, 19) : 'OFFICIAL';
+    html += `
+      <div class="rc-log-item">
+        <span class="rc-log-time">${timeStr}</span>
+        <span class="rc-log-flag">${flagIcon}</span>
+        <span class="rc-log-msg">${ev.message || ev.flag || ev.category}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
 }
 
 function switchTab(tabId) {
