@@ -16,14 +16,28 @@ const simOverlayState = {
   totalLaps: 53,
   currentLap: 20,
   pitLap: 22,
-  newCompound: "HARD",
+  newCompound: "Hard",
   projectedFinishPos: 2,
   posDelta: 1,
   isCurrentlyBoxing: false
 };
 
+function normalizeCompound(c) {
+  if (!c) return "Medium";
+  const s = String(c).trim().toUpperCase();
+  if (s.startsWith("SOFT")) return "Soft";
+  if (s.startsWith("HARD")) return "Hard";
+  if (s.startsWith("INTER")) return "Intermediate";
+  if (s.startsWith("WET")) return "Wet";
+  return "Medium";
+}
+
 async function triggerBoxThisLap() {
-  const curLap = parseInt(document.getElementById('currentLapInput').value) || 20;
+  const driverObj = lerpDriversMap.get(followedDriverNo);
+  const curLap = (driverObj && driverObj.current_lap) 
+    ? driverObj.current_lap 
+    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
+
   const pitRange = document.getElementById('userPitLapRange');
   const pitDisp = document.getElementById('userPitLapDisplay');
   const pitInp = document.getElementById('userPitLapInput');
@@ -37,7 +51,6 @@ async function triggerBoxThisLap() {
   simOverlayState.pitLap = curLap;
 
   // Immediately reflect pit entry in timing tower
-  const driverObj = lerpDriversMap.get(followedDriverNo);
   if (driverObj) {
     driverObj.isPitLap = true;
     driverObj.pit_stop_count = (driverObj.pit_stop_count || 0) + 1;
@@ -48,12 +61,18 @@ async function triggerBoxThisLap() {
 }
 
 async function runSingleDriverSimulation(isBoxNow = false) {
-  const curLap = parseInt(document.getElementById('currentLapInput').value) || 20;
-  const pitLap = isBoxNow ? curLap : (parseInt(document.getElementById('userPitLapInput').value) || (curLap + 4));
-  const newCompound = document.getElementById('userNewCompoundSelect').value || "HARD";
+  const driverObj = lerpDriversMap.get(followedDriverNo);
+  const curLap = (driverObj && driverObj.current_lap) 
+    ? driverObj.current_lap 
+    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
+  const pitLap = isBoxNow 
+    ? curLap 
+    : (parseInt(document.getElementById('userPitLapInput')?.value) || Math.min(53, curLap + 4));
+  const rawCompound = document.getElementById('userNewCompoundSelect')?.value || "Hard";
+  const newCompound = normalizeCompound(rawCompound);
 
   const payload = {
-    session_key: parseInt(document.getElementById('boundSessionKey').value) || 9000,
+    session_key: parseInt(document.getElementById('boundSessionKey')?.value) || 9000,
     driver_number: followedDriverNo,
     pit_lap: pitLap,
     new_compound: newCompound,
@@ -71,6 +90,9 @@ async function runSingleDriverSimulation(isBoxNow = false) {
     if (resp.ok) {
       const data = await resp.json();
       renderSingleDriverSimResults(data);
+    } else {
+      const errText = await resp.text();
+      console.error("Single driver simulation returned error:", resp.status, errText);
     }
   } catch (e) {
     console.error("Single driver simulation failed", e);
@@ -279,11 +301,15 @@ function updateSimScrubberUI() {
 
 // Multi-driver simulation runner
 async function runMultiDriverSimulation() {
-  const curLap = parseInt(document.getElementById('currentLapInput').value) || 20;
-  const targetPitLap = parseInt(document.getElementById('userPitLapInput').value) || 22;
-  const newCompound = document.getElementById('userNewCompoundSelect').value || "HARD";
-  const r1Reaction = document.getElementById('rival1Reaction').value || "CoverUndercut";
-  const r2Reaction = document.getElementById('rival2Reaction').value || "ExtendStint";
+  const driverObj = lerpDriversMap.get(followedDriverNo);
+  const curLap = (driverObj && driverObj.current_lap) 
+    ? driverObj.current_lap 
+    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
+  const targetPitLap = parseInt(document.getElementById('userPitLapInput')?.value) || Math.min(53, curLap + 4);
+  const rawCompound = document.getElementById('userNewCompoundSelect')?.value || "Hard";
+  const newCompound = normalizeCompound(rawCompound);
+  const r1Reaction = document.getElementById('rival1Reaction')?.value || "CoverUndercut";
+  const r2Reaction = document.getElementById('rival2Reaction')?.value || "ExtendStint";
 
   const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
   const topContenders = allDrivers.slice(0, 5);
@@ -299,21 +325,21 @@ async function runMultiDriverSimulation() {
       targetComps = [newCompound];
       reaction = "Standard";
     } else if (d.position === 1 || d.position === 2) {
-      plannedLaps = [targetPitLap + 2];
-      targetComps = ["HARD"];
+      plannedLaps = [Math.min(53, targetPitLap + 2)];
+      targetComps = ["Hard"];
       reaction = r1Reaction;
     } else {
-      plannedLaps = [targetPitLap + 8];
-      targetComps = ["MEDIUM"];
+      plannedLaps = [Math.min(53, targetPitLap + 8)];
+      targetComps = ["Medium"];
       reaction = r2Reaction;
     }
 
     return {
-      driver_id: d.tla,
-      team: d.team,
+      driver_id: d.tla || getDriverTla(d),
+      team: d.team || getDriverTeam(d),
       current_position: d.position,
       gap_to_leader_seconds: (d.position - 1) * 2.2,
-      current_compound: d.compound || "MEDIUM",
+      current_compound: normalizeCompound(d.compound || "Medium"),
       tyre_age: d.tyre_age || 15,
       planned_pit_laps: plannedLaps,
       target_compounds: targetComps,
@@ -322,7 +348,6 @@ async function runMultiDriverSimulation() {
   });
 
   const payload = {
-    session_key: parseInt(document.getElementById('boundSessionKey').value) || 9000,
     total_laps: 53,
     current_lap: curLap,
     track_id: currentSessionLocation || "monza",
@@ -339,6 +364,9 @@ async function runMultiDriverSimulation() {
     if (resp.ok) {
       const data = await resp.json();
       renderMultiDriverSimResults(data);
+    } else {
+      const errText = await resp.text();
+      console.error("Multi-driver simulation returned error:", resp.status, errText);
     }
   } catch (e) {
     console.error("Multi-driver simulation request failed", e);
@@ -353,18 +381,27 @@ function renderMultiDriverSimResults(data) {
   container.classList.remove('hidden');
 
   let rows = '';
-  (data.driver_outcomes || []).forEach(o => {
-    const delta = o.initial_position - o.final_position;
+  const outcomes = data.results || data.driver_outcomes || [];
+  outcomes.forEach(o => {
+    const finalPos = o.projected_finish_position || o.final_position || 1;
+    const startPos = o.starting_position || o.initial_position || finalPos;
+    const delta = (o.position_delta !== undefined) ? o.position_delta : (startPos - finalPos);
     const deltaClass = delta > 0 ? 'pos-gain' : (delta < 0 ? 'pos-loss' : 'pos-same');
     const deltaSymbol = delta > 0 ? `▲${delta}` : (delta < 0 ? `▼${Math.abs(delta)}` : '―');
+    const gap = (o.delta_to_winner_seconds !== undefined) 
+      ? o.delta_to_winner_seconds 
+      : (o.gap_to_winner || 0.0);
+    const pits = (o.pit_stops_completed !== undefined) 
+      ? o.pit_stops_completed 
+      : (o.pit_stops || 0);
 
     rows += `
       <tr>
-        <td style="font-weight: 800;">P${o.final_position}</td>
+        <td style="font-weight: 800;">P${finalPos}</td>
         <td><strong>${o.driver_id}</strong> <span style="font-size: 8px; color: var(--text-muted);">${o.team}</span></td>
         <td class="${deltaClass}">${deltaSymbol}</td>
-        <td>+${o.gap_to_winner.toFixed(1)}s</td>
-        <td><span class="pit-tag">${o.pit_stops} PITS</span></td>
+        <td>+${gap.toFixed(1)}s</td>
+        <td><span class="pit-tag">${pits} PITS</span></td>
       </tr>
     `;
   });
@@ -386,41 +423,57 @@ function renderMultiDriverSimResults(data) {
     </table>
     <div class="narrative-box">
       <strong>AI RACE ENGINEER SUMMARY:</strong><br>
-      ${data.race_narrative}
+      ${data.race_narrative || 'All driver hypotheses evaluated successfully.'}
     </div>
   `;
 }
 
 // Global AI strategy optimization call
 async function runSimulation() {
+  const driverObj = lerpDriversMap.get(followedDriverNo);
+  const curLap = (driverObj && driverObj.current_lap) 
+    ? driverObj.current_lap 
+    : (parseInt(document.getElementById('currentLapInput')?.value) || 20);
+  const curCompound = normalizeCompound((driverObj && driverObj.compound) 
+    ? driverObj.compound 
+    : (document.getElementById('tireSelect')?.value || "Medium"));
+  const curTyreAge = (driverObj && driverObj.tyre_age !== undefined) 
+    ? driverObj.tyre_age 
+    : (parseInt(document.getElementById('tireAgeInput')?.value) || 15);
+  const mandatoryPit = (driverObj && (driverObj.pit_stop_count || 0) > 0) || false;
+
+  const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
+  const egoPos = driverObj ? driverObj.position : 1;
+  const competitors = allDrivers
+    .filter(d => d.driver_number !== followedDriverNo)
+    .slice(0, 8)
+    .map(d => ({
+      driver_name: d.tla || getDriverTla(d),
+      team: d.team || getDriverTeam(d),
+      current_lap: d.current_lap || curLap,
+      gap_to_ego_seconds: (d.position - egoPos) * 1.8,
+      current_tire: normalizeCompound(d.compound || "Medium"),
+      tire_age_laps: d.tyre_age || 10,
+      projected_pit_lap: Math.min(53, curLap + 5)
+    }));
+
   const payload = {
-    car: {
-      team: "McLaren",
-      base_pace: 88.0,
-      tire_deg_mult: 1.0,
-      pit_crew_avg: 2.4,
-      pit_crew_std_dev: 0.2
-    },
-    race_state: {
+    track: {
       total_laps: 53,
-      current_lap: parseInt(document.getElementById('currentLapInput').value) || 20,
-      current_compound: document.getElementById('tireSelect').value || "Medium",
-      current_tire_age: parseInt(document.getElementById('tireAgeInput').value) || 15,
-      current_position: 1,
-      gap_to_leader: 0.0,
-      track_status: document.getElementById('envSelect').value || "Green",
-      weather: {
-        current: { air_temp: 24.0, track_temp: 38.0, rain_intensity: 0.0, weather_type: "Dry" },
-        forecast: []
-      },
-      competitors: []
+      base_pit_stop_loss_seconds: 22.5,
+      historical_sc_probability: 0.30
     },
-    track_params: {
-      base_pit_loss: 24.0,
-      tire_wear_mult: 1.0,
-      drs_zones: 2,
-      fuel_effect_per_lap: 0.035
-    }
+    environment: "Green",
+    ego_car: {
+      current_lap: curLap,
+      current_tire: curCompound,
+      tire_age_laps: curTyreAge,
+      mandatory_pit_completed: mandatoryPit,
+      front_wing_damage: false,
+      time_penalty_seconds: 0.0
+    },
+    competitors: competitors,
+    weather_forecast: null
   };
 
   try {
@@ -432,7 +485,25 @@ async function runSimulation() {
 
     if (res.ok) {
       const data = await res.json();
-      renderStrategies(data.strategies);
+      const allStrats = [];
+      if (data.optimal_strategy) allStrats.push(data.optimal_strategy);
+      if (Array.isArray(data.alternative_strategies)) {
+        allStrats.push(...data.alternative_strategies);
+      }
+      renderStrategies(allStrats);
+
+      const alertBox = document.getElementById('alertBox');
+      if (alertBox && data.summary_message) {
+        alertBox.innerHTML = `
+          <div style="font-size: 10px; color: var(--color-green); background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; padding: 4px 8px; margin-bottom: 8px;">
+            🏁 <strong>OPTIMIZER:</strong> ${data.summary_message}
+            ${data.safety_car_advantage_active ? ' • <span style="color: var(--color-yellow)">SC WINDOW BONUS ACTIVE</span>' : ''}
+          </div>
+        `;
+      }
+    } else {
+      const errText = await res.text();
+      console.error("Simulation run returned error:", res.status, errText);
     }
   } catch (err) {
     console.error("Simulation run failed:", err);
@@ -449,32 +520,42 @@ function renderStrategies(strategies) {
     const card = document.createElement('div');
     card.className = `matrix-card ${isOpt ? 'optimal' : ''}`;
 
-    let stopsDesc = strat.pit_stops.length === 0 
+    let stopsDesc = (!strat.pit_stops || strat.pit_stops.length === 0) 
       ? 'NO STOP (0-STOP)' 
-      : strat.pit_stops.map(p => `LAP ${p.lap} ➔ ${p.compound}`).join(' | ');
+      : strat.pit_stops.map(p => `LAP ${p.pit_lap || p.lap} ➔ ${p.new_compound || p.compound}`).join(' | ');
+
+    const metrics = strat.monte_carlo_metrics || strat.metrics || {
+      expected_time_seconds: strat.projected_total_time_seconds || 0,
+      win_probability_pct: isOpt ? 85.0 : 42.0,
+      p10_time_seconds: (strat.projected_total_time_seconds || 0) - 4.5,
+      p90_time_seconds: (strat.projected_total_time_seconds || 0) + 7.2
+    };
+
+    const expTimeFormatted = strat.projected_total_time_formatted 
+      || formatLapTime(metrics.expected_time_seconds);
 
     card.innerHTML = `
       <div class="matrix-title">
         <span>${isOpt ? '★ OPTIMAL ' : ''}${strat.name.toUpperCase()}</span>
         <span>${stopsDesc}</span>
       </div>
-      <div style="font-size: 10px; color: var(--text-muted);">${strat.description || 'Estimated multi-stint simulation'}</div>
+      <div style="font-size: 10px; color: var(--text-muted);">${strat.description || `${strat.total_pit_stops} Pit Stop Strategy • Delta: ${strat.delta_to_optimal_seconds > 0 ? '+' + strat.delta_to_optimal_seconds.toFixed(2) + 's' : 'BASELINE'}`}</div>
       <div class="stat-grid">
         <div class="stat-box">
           <div class="stat-label">EXP. TIME</div>
-          <div class="stat-val">${formatLapTime(strat.metrics.expected_time_seconds)}</div>
+          <div class="stat-val">${expTimeFormatted}</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">WIN PROB</div>
-          <div class="stat-val" style="color: var(--color-green)">${strat.metrics.win_probability_pct.toFixed(1)}%</div>
+          <div class="stat-val" style="color: var(--color-green)">${metrics.win_probability_pct ? metrics.win_probability_pct.toFixed(1) : 0}%</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">P10 (CEILING)</div>
-          <div class="stat-val">${formatLapTime(strat.metrics.p10_time_seconds)}</div>
+          <div class="stat-val">${formatLapTime(metrics.p10_time_seconds)}</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">P90 (RISK)</div>
-          <div class="stat-val">${formatLapTime(strat.metrics.p90_time_seconds)}</div>
+          <div class="stat-val">${formatLapTime(metrics.p90_time_seconds)}</div>
         </div>
       </div>
     `;

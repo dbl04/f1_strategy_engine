@@ -12,14 +12,19 @@ pub struct EgoCar {
     /// Current lap number completed/in-progress.
     pub current_lap: u32,
     /// Currently fitted tire compound.
+    #[serde(alias = "compound", alias = "current_compound")]
     pub current_tire: TireCompound,
     /// Age of current tire set in laps.
+    #[serde(alias = "tyre_age", alias = "tire_age")]
     pub tire_age_laps: u32,
     /// Flag indicating whether mandatory dry compound change rule has been satisfied.
+    #[serde(default)]
     pub mandatory_pit_completed: bool,
     /// Flag indicating front wing aerodynamic damage (+10.0s pit stop penalty).
+    #[serde(default)]
     pub front_wing_damage: bool,
     /// Time penalty accrued to be served during next pit stop (seconds).
+    #[serde(default)]
     pub time_penalty_seconds: f64,
 }
 
@@ -29,16 +34,21 @@ pub struct CompetitorCar {
     /// Competitor driver name or code (e.g. `"VER"`).
     pub driver_name: String,
     /// Constructor team name (e.g. `"Red Bull Racing"`).
+    #[serde(default)]
     pub team: String,
     /// Current lap completed by competitor.
     pub current_lap: u32,
     /// Time gap relative to ego car (positive = ahead of ego car, negative = behind).
+    #[serde(default)]
     pub gap_to_ego_seconds: f64,
     /// Currently fitted tire compound on competitor car.
+    #[serde(alias = "compound", alias = "current_compound")]
     pub current_tire: TireCompound,
     /// Age of competitor's current tires in laps.
+    #[serde(alias = "tyre_age", alias = "tire_age")]
     pub tire_age_laps: u32,
     /// Estimated lap on which competitor will execute their next pit stop.
+    #[serde(default)]
     pub projected_pit_lap: u32,
 }
 

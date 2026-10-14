@@ -113,9 +113,21 @@ async function showDashboardView(sessionKey, location, sessionName) {
   await radarEngine.loadReferenceLapMap(sessionKey);
   await initSessionDVR(sessionKey);
 
-  // Initial calculation runs
-  runSimulation();
-  runSingleDriverSimulation();
+  // Auto-select followed driver or race leader to populate Hero and strategy controls
+  const initialDriver = lerpDriversMap.get(followedDriverNo) || lerpDriversMap.get(1) || Array.from(lerpDriversMap.values())[0];
+  if (initialDriver) {
+    selectFollowedDriver(
+      initialDriver.driver_number,
+      initialDriver.tla,
+      initialDriver.compound,
+      initialDriver.tyre_age,
+      initialDriver.pit_stop_count,
+      initialDriver.team
+    );
+  } else {
+    runSimulation();
+    runSingleDriverSimulation();
+  }
 }
 
 async function pollLiveState() {
