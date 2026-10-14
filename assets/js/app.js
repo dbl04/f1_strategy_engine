@@ -1,0 +1,284 @@
+// ==========================================
+// 6. MAIN APPLICATION ORCHESTRATOR & 60 FPS LOOP
+// ==========================================
+
+let currentSessionKey = 9000;
+let currentSessionLocation = "Monza";
+let followedDriverNo = 1;
+let activeVisualizer = "2d";
+let networkPollInterval = null;
+
+// Driver LERP Interpolation State Map
+const lerpDriversMap = new Map();
+let refTrackPoints = [];
+
+const radarEngine = new OpenF1RadarEngine('trackCanvas');
+const circularRingEngine = new CircularRadarEngine('ringCanvas');
+
+function renderLoop(now) {
+  const deltaTime = (now - dvrState.lastFrameTime) / 1000;
+  dvrState.lastFrameTime = now;
+
+  // Advance In-Memory DVR Playback Ticker
+  if (dvrState.isPlaying && dvrState.telemetryBuffer.length > 0) {
+    dvrState.currentTimestamp += deltaTime * dvrState.playbackSpeed;
+    if (dvrState.currentTimestamp > dvrState.endTime) {
+      dvrState.currentTimestamp = dvrState.startTime; // Loop playback
+    }
+    applyDVRState(dvrState.currentTimestamp);
+  }
+
+  // Advance Simulated Strategy Trajectory Dot and Progress
+  if (simOverlayState.isActive && simOverlayState.isPlaying) {
+    // Average lap duration ~88s -> normalized progress increment per second ~ 0.0114 at 1x
+    const lapAdvance = (deltaTime * 0.012 * simOverlayState.playbackSpeed);
+    simOverlayState.simulatedProgress += lapAdvance;
+    if (simOverlayState.simulatedProgress >= 1.0) {
+      simOverlayState.simulatedProgress %= 1.0;
+      simOverlayState.isCurrentlyBoxing = false; // Finished pit lap
+      if (simOverlayState.timeline.length > 0 && simOverlayState.activeTimelineIndex < simOverlayState.timeline.length - 1) {
+        simOverlayState.activeTimelineIndex++;
+        updateSimScrubberUI();
+        renderTimingTowerTable();
+      }
+    }
+  }
+
+  // Smooth Linear Interpolation towards targets with teleport guard
+  lerpDriversMap.forEach(driver => {
+    const distSq = (driver.targetX - driver.currentX) ** 2 + (driver.targetY - driver.currentY) ** 2;
+    if (distSq > 0.005) {
+      driver.currentX = driver.targetX;
+      driver.currentY = driver.targetY;
+    } else {
+      driver.currentX += (driver.targetX - driver.currentX) * 0.25;
+      driver.currentY += (driver.targetY - driver.currentY) * 0.25;
+    }
+  });
+
+  if (activeVisualizer === '2d') {
+    radarEngine.render();
+  } else if (activeVisualizer === 'ring') {
+    circularRingEngine.render();
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+
+function switchVisualizer(type) {
+  activeVisualizer = type;
+  const btn2D = document.getElementById('btnViz2D');
+  const btnRing = document.getElementById('btnVizRing');
+  if (btn2D) btn2D.classList.toggle('active', type === '2d');
+  if (btnRing) btnRing.classList.toggle('active', type === 'ring');
+
+  const c2d = document.getElementById('trackCanvas');
+  const cRing = document.getElementById('ringCanvas');
+
+  if (type === '2d') {
+    if (c2d) c2d.classList.remove('hidden');
+    if (cRing) cRing.classList.add('hidden');
+    radarEngine.render();
+  } else {
+    if (c2d) c2d.classList.add('hidden');
+    if (cRing) cRing.classList.remove('hidden');
+    circularRingEngine.render();
+  }
+}
+
+// Navigation & Views
+function showLandingView() {
+  dvrPause();
+  if (networkPollInterval) {
+    clearInterval(networkPollInterval);
+    networkPollInterval = null;
+  }
+  document.getElementById('landingView').classList.remove('hidden');
+  document.getElementById('dashboardView').classList.add('hidden');
+}
+
+async function showDashboardView(sessionKey, location, sessionName) {
+  currentSessionKey = sessionKey;
+  currentSessionLocation = location;
+  document.getElementById('boundSessionKey').value = sessionKey;
+  document.getElementById('dashSessionKeyDisplay').innerText = sessionKey;
+  document.getElementById('dashSessionTitle').innerText = `${location.toUpperCase()} - ${sessionName.toUpperCase()}`;
+
+  document.getElementById('landingView').classList.add('hidden');
+  document.getElementById('dashboardView').classList.remove('hidden');
+
+  showLoadingScreen(`Acquiring High-Frequency GPS Telemetry for ${location} (Session ${sessionKey})...`);
+
+  // Load track geometry and start DVR
+  await radarEngine.loadReferenceLapMap(sessionKey);
+  await initSessionDVR(sessionKey);
+
+  // Initial calculation runs
+  runSimulation();
+  runSingleDriverSimulation();
+}
+
+async function pollLiveState() {
+  try {
+    const res = await fetch(`/api/live-state/${currentSessionKey}`);
+    if (res.ok) {
+      const state = await res.json();
+      
+      const badge = document.getElementById('statusBadge');
+      if (badge) {
+        badge.innerText = `TRACK STATUS: ${state.track_status.toUpperCase()}`;
+        badge.className = 'status-badge ' + (
+          state.track_status === 'Green' ? 'status-green' :
+          state.track_status === 'Yellow' ? 'status-vsc' :
+          state.track_status === 'SafetyCar' ? 'status-sc' : 'status-red'
+        );
+      }
+
+      const odiEl = document.getElementById('headerDynamicOdi');
+      if (odiEl && state.current_odi !== undefined) {
+        odiEl.innerText = `${state.current_odi.toFixed(2)} (${state.odi_rating || 'MODERATE'})`;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to poll live state:", err);
+  }
+}
+
+async function initSessionDVR(sessionKey) {
+  try {
+    updateLoadingProgress(20, "Fetching OpenF1 Drivers & Grid Lineup...");
+    const driversRes = await fetch(`/api/openf1/drivers?session_key=${sessionKey}`);
+    const drivers = driversRes.ok ? await driversRes.json() : [];
+
+    updateLoadingProgress(45, "Retrieving Real Session Laps & Timing Records...");
+    const lapsRes = await fetch(`/api/openf1/session-laps?session_key=${sessionKey}`);
+    const rawLaps = lapsRes.ok ? await lapsRes.json() : [];
+
+    updateLoadingProgress(65, "Acquiring Stint Compounds & Degradation Metadata...");
+    const stintsRes = await fetch(`/api/openf1/stints?session_key=${sessionKey}`);
+    const rawStints = stintsRes.ok ? await stintsRes.json() : [];
+
+    updateLoadingProgress(85, "Synchronizing Race Control & Weather Feeds...");
+    const weatherRes = await fetch(`/api/openf1/weather?session_key=${sessionKey}`);
+    let trackTemp = 38.4, airTemp = 24.1;
+    if (weatherRes.ok) {
+      const wList = await weatherRes.json();
+      if (wList && wList.length > 0) {
+        trackTemp = wList[wList.length - 1].track_temperature || 38.4;
+        airTemp = wList[wList.length - 1].air_temperature || 24.1;
+      }
+    }
+
+    const trackTempEl = document.getElementById('headerTrackTemp');
+    if (trackTempEl) trackTempEl.innerText = `${trackTemp.toFixed(1)}°C`;
+    const airTempEl = document.getElementById('headerAirTemp');
+    if (airTempEl) airTempEl.innerText = `${airTemp.toFixed(1)}°C`;
+
+    buildSessionDVRBuffer(drivers, "GREEN", trackTemp, airTemp, rawLaps, rawStints);
+  } catch (e) {
+    console.error("Failed to initialize session DVR buffer", e);
+    buildSessionDVRBuffer([], "GREEN", 38.4, 24.1, [], []);
+  }
+  hideLoadingScreen();
+  dvrPause();
+  updateDVRControlsUI();
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+  const clickedBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+  if (clickedBtn) clickedBtn.classList.add('active');
+
+  const content = document.getElementById(tabId);
+  if (content) content.classList.add('active');
+}
+
+async function fetchSessions() {
+  const container = document.getElementById('accordionContainer');
+  if (!container) return;
+  container.innerHTML = '<div style="color: var(--text-muted); font-size: 11px;">Loading sessions from OpenF1 pipeline...</div>';
+
+  try {
+    const res = await fetch('/api/openf1/sessions');
+    if (res.ok) {
+      const sessions = await res.json();
+      renderAccordions(sessions);
+    } else {
+      container.innerHTML = '<div style="color: var(--color-red);">Failed to load sessions.</div>';
+    }
+  } catch (err) {
+    container.innerHTML = '<div style="color: var(--color-red);">Network error loading sessions.</div>';
+  }
+}
+
+function renderAccordions(sessions) {
+  const container = document.getElementById('accordionContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const groups = new Map();
+  sessions.forEach(s => {
+    const key = `${s.year || 2024} - ${s.country_name || s.location || 'Unknown'}`;
+    if (!groups.has(key)) {
+      groups.set(key, { location: s.location || 'Circuit', country: s.country_name || 'Grand Prix', sessions: [] });
+    }
+    groups.get(key).sessions.push(s);
+  });
+
+  groups.forEach((group, gpName) => {
+    const card = document.createElement('div');
+    card.className = 'gp-card';
+
+    let sessionCards = '';
+    group.sessions.forEach(sess => {
+      const isLive = sess.is_live;
+      sessionCards += `
+        <div class="sub-session-card ${isLive ? 'is-live' : ''}" onclick="showDashboardView(${sess.session_key}, '${sess.location || 'Monza'}', '${sess.session_name}')">
+          <div class="sub-session-type">
+            <span>${sess.session_name}</span>
+            ${isLive ? '<span style="color: var(--color-red); font-weight: 800;">LIVE</span>' : ''}
+          </div>
+          <div class="sub-session-date">KEY #${sess.session_key} • ${sess.date_start ? sess.date_start.substring(0, 10) : '2024'}</div>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="gp-card-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <div class="gp-title-group">
+          <span>🏁</span>
+          <span>${gpName.toUpperCase()}</span>
+        </div>
+        <span style="font-size: 10px; color: var(--color-purple);">(${group.sessions.length} SESSIONS) ▾</span>
+      </div>
+      <div class="gp-sessions-list">
+        ${sessionCards}
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+async function replayOpenF1State() {
+  try {
+    const resp = await fetch('/api/openf1/replay-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_key: currentSessionKey, speed_multiplier: 1.0 })
+    });
+    if (resp.ok) {
+      alert("Replaying OpenF1 Session telemetry into engine physics buffer.");
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Global initialization
+window.addEventListener('DOMContentLoaded', () => {
+  fetchSessions();
+  requestAnimationFrame(renderLoop);
+});

@@ -90,6 +90,7 @@ pub struct ApiDoc;
 pub fn create_router() -> Router {
     Router::new()
         .route("/", get(handlers::index_handler))
+        .nest_service("/assets", tower_http::services::ServeDir::new("assets"))
         .route("/api/tracks", get(handlers::get_tracks))
         .route("/simulate", post(handlers::simulate_race))
         .route("/api/simulate-multi", post(handlers::simulate_multi_driver))
@@ -132,4 +133,5 @@ pub fn create_router() -> Router {
             post(openf1::replay_openf1_state),
         )
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .fallback_service(tower_http::services::ServeDir::new("assets").append_index_html_on_directories(true))
 }

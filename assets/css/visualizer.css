@@ -1,0 +1,154 @@
+/* Center Panel Grid (Map + Telemetry) */
+.center-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #020204;
+  overflow: hidden;
+}
+
+.canvas-container {
+  height: 60%;
+  position: relative;
+  background: #020204;
+  border-bottom: 1px solid var(--border-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+#trackCanvas, #ringCanvas {
+  width: 100%;
+  flex: 1;
+  background: #020204;
+  display: block;
+}
+
+.telemetry-container {
+  height: 40%;
+  background: #050508;
+  display: flex;
+  flex-direction: column;
+}
+
+#telemetryCanvas {
+  width: 100%;
+  flex: 1;
+  display: block;
+}
+
+/* Dual Display Toggle Buttons */
+.viz-toggle-btn {
+  background: #111118;
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.viz-toggle-btn.active {
+  background: var(--color-purple);
+  color: #000;
+  border-color: var(--color-purple);
+}
+
+.map-tooltip {
+  position: absolute;
+  background: rgba(10, 10, 16, 0.95);
+  border: 1px solid var(--border-light);
+  padding: 8px 10px;
+  font-size: 10px;
+  color: var(--text-main);
+  pointer-events: none;
+  z-index: 100;
+  display: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+/* In-Memory DVR Control Bar */
+.dvr-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: #08080d;
+  border-top: 1px solid var(--border-dark);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.dvr-btn {
+  background: #12121c;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dvr-btn:hover {
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+}
+
+.dvr-btn.active-play {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+}
+
+.dvr-speed-group {
+  display: flex;
+  gap: 2px;
+}
+
+.dvr-speed-btn {
+  background: #0d0d14;
+  border: 1px solid var(--border-dark);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+
+.dvr-speed-btn:hover {
+  color: var(--text-main);
+  border-color: var(--border-light);
+}
+
+.dvr-speed-btn.active {
+  background: var(--color-purple);
+  color: #000;
+  border-color: var(--color-purple);
+}
+
+.dvr-scrubber-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+#dvrScrubber {
+  width: 100%;
+  accent-color: var(--color-purple);
+  cursor: pointer;
+  height: 4px;
+  background: #1a1a24;
+}
+
+.dvr-time-display {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-cyan);
+  min-width: 84px;
+  text-align: right;
+}

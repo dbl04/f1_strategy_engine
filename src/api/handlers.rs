@@ -10,8 +10,11 @@ use crate::engine::optimizer::optimize_race_strategies;
 use crate::error::AppError;
 
 /// Serves the interactive F1 TV Broadcast Web Dashboard HTML interface at `GET /`.
-pub async fn index_handler() -> Html<&'static str> {
-    Html(include_str!("../../assets/index.html"))
+pub async fn index_handler() -> Html<String> {
+    match tokio::fs::read_to_string("assets/index.html").await {
+        Ok(content) => Html(content),
+        Err(_) => Html(include_str!("../../assets/index.html").to_string()),
+    }
 }
 
 /// Retrieves metadata for all supported official F1 circuits.

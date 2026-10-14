@@ -1,0 +1,138 @@
+/* Timing Tower Table */
+.tower-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.timing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.timing-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  text-align: left;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-dark);
+  font-weight: 700;
+  font-size: 10px;
+  z-index: 2;
+  user-select: none;
+}
+
+.timing-table td {
+  padding: 5px 4px;
+  border-bottom: 1px solid #111116;
+  white-space: nowrap;
+}
+
+.timing-table tr {
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  position: relative;
+}
+
+.timing-table tr:hover {
+  background-color: #12121c;
+}
+
+.timing-table tr.followed-row {
+  background-color: rgba(168, 85, 247, 0.2) !important;
+  border-left: 3px solid var(--color-purple);
+}
+
+.driver-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.team-stripe {
+  width: 3px;
+  height: 14px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.compound-tag {
+  padding: 1px 4px;
+  font-weight: 800;
+  font-size: 10px;
+  border-radius: 2px !important;
+  display: inline-block;
+  min-width: 22px;
+  text-align: center;
+}
+.comp-soft { color: #fff; background: var(--compound-soft); border: 1px solid var(--compound-soft); }
+.comp-medium { color: #000; background: var(--compound-medium); border: 1px solid var(--compound-medium); }
+.comp-hard { color: #000; background: #ffffff; border: 1px solid #ffffff; }
+.comp-inter { color: #fff; background: var(--compound-inter); border: 1px solid var(--compound-inter); }
+.comp-wet { color: #fff; background: var(--compound-wet); border: 1px solid var(--compound-wet); }
+
+.pit-tag {
+  background: #14141e;
+  color: #bbbbdd;
+  border: 1px solid #28283c;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  display: inline-block;
+}
+
+.pit-tag-boxing {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #ff6b6b !important;
+  border-color: var(--color-red) !important;
+  animation: pulse 0.8s infinite alternate;
+}
+
+/* 2026 FIA Regulations: Manual Override Mode (Overtake Boost) replacing DRS */
+.ot-tag {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 2px !important;
+  text-align: center;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+.ot-active {
+  background: var(--color-green);
+  color: #000;
+  animation: pulse 0.8s infinite alternate;
+}
+.ot-inactive {
+  background: #111116;
+  color: #444455;
+  border: 1px solid #22222d;
+}
+
+/* Backward-compatible alias */
+.drs-tag { composes: ot-tag; }
+.drs-active { composes: ot-active; }
+.drs-inactive { composes: ot-inactive; }
+
+/* Simulation Active Highlight */
+.sim-row-pill {
+  background: var(--color-purple);
+  color: #000000;
+  font-weight: 800;
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 2px !important;
+  margin-left: 3px;
+}
+
+.sim-row-active {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+  border-left: 3px solid var(--color-cyan) !important;
+}
+
+.pos-gain { color: var(--color-green); font-weight: 700; }
+.pos-loss { color: var(--color-red); font-weight: 700; }
+.pos-same { color: var(--text-muted); }
