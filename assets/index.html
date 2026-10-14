@@ -261,7 +261,7 @@
 
     main {
       display: grid;
-      grid-template-columns: 360px 1fr 400px;
+      grid-template-columns: 410px 1fr 430px;
       height: calc(100vh - 40px);
       background-color: var(--bg-black);
       overflow: hidden;
@@ -319,20 +319,24 @@
       background: var(--bg-surface);
       color: var(--text-muted);
       text-align: left;
-      padding: 6px 6px;
+      padding: 6px 4px;
       border-bottom: 1px solid var(--border-dark);
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 10px;
       z-index: 2;
+      user-select: none;
     }
 
     .timing-table td {
-      padding: 6px 6px;
+      padding: 5px 4px;
       border-bottom: 1px solid #111116;
+      white-space: nowrap;
     }
 
     .timing-table tr {
       cursor: pointer;
       transition: background-color 0.1s ease;
+      position: relative;
     }
 
     .timing-table tr:hover {
@@ -344,16 +348,77 @@
       border-left: 3px solid var(--color-purple);
     }
 
+    .driver-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .team-stripe {
+      width: 3px;
+      height: 14px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
     .compound-tag {
       padding: 1px 4px;
-      font-weight: 700;
+      font-weight: 800;
       font-size: 10px;
+      border-radius: 2px !important;
+      display: inline-block;
+      min-width: 22px;
+      text-align: center;
     }
-    .comp-soft { color: var(--compound-soft); border: 1px solid var(--compound-soft); }
-    .comp-medium { color: var(--compound-medium); border: 1px solid var(--compound-medium); }
-    .comp-hard { color: var(--compound-hard); border: 1px solid var(--compound-hard); }
-    .comp-inter { color: var(--compound-inter); border: 1px solid var(--compound-inter); }
-    .comp-wet { color: var(--compound-wet); border: 1px solid var(--compound-wet); }
+    .comp-soft { color: #fff; background: var(--compound-soft); border: 1px solid var(--compound-soft); }
+    .comp-medium { color: #000; background: var(--compound-medium); border: 1px solid var(--compound-medium); }
+    .comp-hard { color: #000; background: #ffffff; border: 1px solid #ffffff; }
+    .comp-inter { color: #fff; background: var(--compound-inter); border: 1px solid var(--compound-inter); }
+    .comp-wet { color: #fff; background: var(--compound-wet); border: 1px solid var(--compound-wet); }
+
+    .pit-tag {
+      background: #14141e;
+      color: #bbbbdd;
+      border: 1px solid #28283c;
+      padding: 1px 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-align: center;
+      display: inline-block;
+    }
+
+    .drs-tag {
+      font-size: 8px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 2px !important;
+      text-align: center;
+      display: inline-block;
+      letter-spacing: 0.5px;
+    }
+    .drs-active {
+      background: var(--color-green);
+      color: #000;
+      animation: pulse 0.8s infinite alternate;
+    }
+    .drs-inactive {
+      background: #111116;
+      color: #444455;
+      border: 1px solid #22222d;
+    }
+
+    .map-tooltip {
+      position: absolute;
+      background: rgba(10, 10, 16, 0.95);
+      border: 1px solid var(--border-light);
+      padding: 8px 10px;
+      font-size: 10px;
+      color: var(--text-main);
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    }
 
     /* Center Panel Grid (Map + Telemetry) */
     .center-panel-wrapper {
@@ -631,6 +696,100 @@
     .stat-label { color: var(--text-muted); }
     .stat-val { font-weight: 700; color: var(--text-main); font-size: 11px; }
 
+    /* Strategy Playground & Multi-Driver Simulator */
+    .sim-playground {
+      background: #07070b;
+      border: 1px solid var(--border-dark);
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+
+    .driver-hero-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0d0d16;
+      border: 1px solid var(--border-light);
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+
+    .driver-hero-name {
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .odi-gauge-card {
+      background: #0b0b14;
+      border: 1px solid #202035;
+      padding: 7px 9px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .odi-badge {
+      font-weight: 800;
+      padding: 2px 6px;
+      font-size: 10px;
+      border-radius: 2px !important;
+    }
+    .odi-low { background: rgba(34, 197, 94, 0.2); color: var(--color-green); border: 1px solid var(--color-green); }
+    .odi-mid { background: rgba(234, 179, 8, 0.2); color: var(--color-yellow); border: 1px solid var(--color-yellow); }
+    .odi-high { background: rgba(239, 68, 68, 0.2); color: var(--color-red); border: 1px solid var(--color-red); }
+
+    .rival-reaction-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 10px;
+    }
+
+    .rival-reaction-row select {
+      width: 58%;
+      padding: 4px 6px;
+      font-size: 10px;
+    }
+
+    .multi-sim-results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin-top: 8px;
+    }
+
+    .multi-sim-results-table th {
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 4px;
+      text-align: left;
+      font-size: 9px;
+    }
+
+    .multi-sim-results-table td {
+      padding: 4px 4px;
+      border-bottom: 1px solid #14141e;
+    }
+
+    .pos-gain { color: var(--color-green); font-weight: 700; }
+    .pos-loss { color: var(--color-red); font-weight: 700; }
+    .pos-same { color: var(--text-muted); }
+
+    .narrative-box {
+      background: #080810;
+      border-left: 3px solid var(--color-purple);
+      padding: 8px 10px;
+      margin-top: 10px;
+      font-size: 10px;
+      line-height: 1.4;
+      color: #bbbbdd;
+    }
+
     .box-now-alert {
       background: var(--color-red);
       color: #fff;
@@ -794,7 +953,8 @@
 
       <div class="header-metrics">
         <div>LAP: <span style="color: var(--color-purple); font-weight: 800;" id="headerLapCounter">1 / 53</span></div>
-        <div>FOLLOWING: <span style="color: var(--color-purple); font-weight: 800;" id="followedDriverBadge">#1 VER</span></div>
+        <div>FOLLOWING: <span style="color: var(--color-purple); font-weight: 800;" id="followedDriverBadge">#1 NOR</span></div>
+        <div>DYNAMIC ODI: <span style="color: var(--color-yellow); font-weight: 800;" id="headerDynamicOdi">0.40 (MODERATE)</span></div>
         <div>TRACK TEMP: <span style="color: var(--color-yellow)" id="headerTrackTemp">38.4°C</span></div>
         <div>AIR TEMP: <span style="color: var(--color-cyan)" id="headerAirTemp">24.1°C</span></div>
         <div id="statusBadge" class="status-badge status-green">TRACK STATUS: GREEN</div>
@@ -802,27 +962,30 @@
     </header>
 
     <main>
-      <!-- LEFT PANEL: LIVE DEDUPLICATED TIMING TOWER -->
+      <!-- LEFT PANEL: LIVE ENRICHED TIMING TOWER -->
       <div class="panel">
         <div class="panel-header">
-          <span>LIVE TIMING TOWER (CLICK ROW TO FOLLOW)</span>
+          <span>LIVE TIMING TOWER (CLICK TO FOCUS)</span>
           <span>SESSION <span id="dashSessionKeyDisplay">9000</span></span>
         </div>
         <div class="tower-scroll-container">
           <table class="timing-table">
             <thead>
               <tr>
-                <th>POS</th>
-                <th>NO</th>
-                <th>DRIVER</th>
-                <th>GAP</th>
-                <th>INT</th>
-                <th>TYRE</th>
-                <th>AGE</th>
+                <th style="width: 26px;">POS</th>
+                <th style="width: 22px;">NO</th>
+                <th style="width: 64px;">DRIVER</th>
+                <th style="width: 52px;">GAP</th>
+                <th style="width: 52px;">INT</th>
+                <th style="width: 36px;">TYRE</th>
+                <th style="width: 30px;">AGE</th>
+                <th style="width: 30px;">PITS</th>
+                <th style="width: 30px;">DRS</th>
+                <th style="width: 48px;">LAST</th>
               </tr>
             </thead>
             <tbody id="timingTowerBody">
-              <!-- Deduplicated 22 unique driver records -->
+              <!-- Enriched 22 unique driver records -->
             </tbody>
           </table>
         </div>
@@ -830,7 +993,7 @@
 
       <!-- CENTER PANEL: DUAL DISPLAY VISUALIZERS (2D MAP + CIRCULAR RADAR) -->
       <div class="panel center-panel-wrapper">
-        <div class="canvas-container">
+        <div class="canvas-container" style="position: relative;">
           <div class="panel-header">
             <span>60 FPS TIME-SERIES VISUALIZER</span>
             <div style="display: flex; gap: 6px;">
@@ -840,6 +1003,7 @@
           </div>
           <canvas id="trackCanvas"></canvas>
           <canvas id="ringCanvas" class="hidden"></canvas>
+          <div id="mapTooltip" class="map-tooltip"></div>
           
           <!-- IN-MEMORY DVR PLAYBACK CONTROLLER BAR -->
           <div class="dvr-control-bar">
@@ -866,70 +1030,118 @@
         </div>
       </div>
 
-      <!-- RIGHT PANEL: LOCKED STRATEGY DIGITAL TWIN -->
+      <!-- RIGHT PANEL: STRATEGY CONTROL CENTER & DIGITAL TWIN -->
       <div class="panel">
         <div class="tab-bar">
-          <button class="tab-btn active" onclick="switchTab('tabStrategy')">OPTIMIZER</button>
+          <button class="tab-btn active" onclick="switchTab('tabStrategy')">STRATEGY</button>
           <button class="tab-btn" onclick="switchTab('tabTelemetry')">TELEMETRY</button>
           <button class="tab-btn" onclick="switchTab('tabRaceControl')">RACE CONTROL</button>
         </div>
 
-        <!-- TAB 1: STRATEGY OPTIMIZER -->
+        <!-- TAB 1: STRATEGY SIMULATOR & PLAYGROUND -->
         <div id="tabStrategy" class="tab-content active">
-          <div class="control-group">
-            <label>Active Session Key (Bound)</label>
-            <input type="text" id="boundSessionKey" value="9000" disabled>
-          </div>
-
-          <div class="control-group">
-            <div class="input-row">
-              <div>
-                <label>Current Lap (Locked)</label>
-                <input type="number" id="currentLapInput" value="15" disabled>
-              </div>
-              <div>
-                <label>Tire Age (Locked from Stint)</label>
-                <input type="number" id="tireAgeInput" value="15" disabled>
-              </div>
+          <!-- Active Followed Driver Hero Card -->
+          <div class="driver-hero-card">
+            <div class="driver-hero-name">
+              <span id="heroTeamStripe" class="team-stripe" style="background: #F47600; height: 16px;"></span>
+              <span id="heroDriverTitle">#1 L. NORRIS</span>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span id="heroPosBadge" style="font-weight: 800; color: var(--color-purple); font-size: 12px;">P1</span>
+              <span id="heroTyreBadge" class="compound-tag comp-medium">MED</span>
+              <span id="heroTyreAge" style="color: var(--text-muted); font-size: 10px;">L15</span>
+              <span id="heroPitCount" class="pit-tag">0 PITS</span>
             </div>
           </div>
 
-          <div class="control-group">
-            <div class="input-row">
-              <div>
-                <label>Current Compound (Locked)</label>
-                <select id="tireSelect" disabled>
-                  <option value="Medium">Medium</option>
-                  <option value="Soft">Soft</option>
-                  <option value="Hard">Hard</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Wet">Wet</option>
-                </select>
-              </div>
-              <div>
-                <label>Track Status (Locked from RC)</label>
-                <select id="envSelect" disabled>
-                  <option value="Green">Green Flag</option>
-                  <option value="SafetyCar">Safety Car (SC)</option>
-                  <option value="VirtualSafetyCar">Virtual Safety Car (VSC)</option>
-                  <option value="Yellow">Yellow Flag</option>
-                </select>
+          <!-- Dynamic Overtaking Difficulty Meter -->
+          <div class="odi-gauge-card">
+            <div>
+              <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase;">DYNAMIC OVERTAKING DIFFICULTY (ODI)</div>
+              <div style="font-size: 11px; font-weight: 700; margin-top: 2px;">
+                <span id="odiRatingText">Moderate (0.40)</span>
+                <span style="font-size: 9px; color: var(--text-muted); font-weight: 400;"> • Fuel burn: -0.03s/lap</span>
               </div>
             </div>
+            <span id="odiBadgePill" class="odi-badge odi-mid">MODERATE</span>
           </div>
 
-          <button class="action-btn" onclick="runSimulation()">Run Strategy Simulation (Digital Twin)</button>
+          <!-- User Custom Strategy Hypothesis Playground -->
+          <div class="sim-playground">
+            <div style="font-size: 10px; font-weight: 700; color: var(--color-purple); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between;">
+              <span>TEST STRATEGY HYPOTHESIS</span>
+              <span style="color: var(--text-muted); font-size: 9px;">MULTI-DRIVER SIM</span>
+            </div>
 
-          <div id="alertBox" style="margin-top: 10px;"></div>
+            <div class="control-group" style="margin-bottom: 8px;">
+              <div class="input-row">
+                <div style="flex: 1;">
+                  <label>TARGET PIT LAP (<span id="userPitLapDisplay">L22</span>)</label>
+                  <input type="range" id="userPitLapRange" min="1" max="53" value="22" oninput="document.getElementById('userPitLapDisplay').innerText = 'L' + this.value; document.getElementById('userPitLapInput').value = this.value;">
+                  <input type="hidden" id="userPitLapInput" value="22">
+                </div>
+                <div style="flex: 1;">
+                  <label>NEW COMPOUND</label>
+                  <select id="userNewCompoundSelect">
+                    <option value="HARD">HARD (Long Stint)</option>
+                    <option value="MEDIUM">MEDIUM (Balanced)</option>
+                    <option value="SOFT">SOFT (Sprint/Attack)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-          <div style="margin-top: 14px;">
+            <div style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; margin-top: 8px; margin-bottom: 4px;">COMPETITOR REACTIVE STRATEGIES</div>
+            
+            <div class="rival-reaction-row">
+              <span id="rival1Label" style="font-weight: 700;">#3 VER:</span>
+              <select id="rival1Reaction">
+                <option value="CoverUndercut" selected>Cover Undercut (Box +1 Lap)</option>
+                <option value="Standard">Standard Pace</option>
+                <option value="ExtendStint">Extend Stint (Long Run)</option>
+                <option value="AggressiveAttack">Aggressive Attack (Softs)</option>
+              </select>
+            </div>
+
+            <div class="rival-reaction-row">
+              <span id="rival2Label" style="font-weight: 700;">#16 LEC:</span>
+              <select id="rival2Reaction">
+                <option value="ExtendStint" selected>Extend Stint (Tyre Offset)</option>
+                <option value="CoverUndercut">Cover Undercut</option>
+                <option value="Standard">Standard Pace</option>
+                <option value="AggressiveAttack">Aggressive Attack</option>
+              </select>
+            </div>
+
+            <button class="action-btn" onclick="runMultiDriverSimulation()">🚀 SIMULATE MULTI-DRIVER RACE</button>
+          </div>
+
+          <!-- Multi-Driver Outcome Results Container -->
+          <div id="multiSimResultsContainer" class="hidden">
             <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none;">
-              <span>PARALLEL MONTE CARLO MATRIX (5,000 RUNS)</span>
+              <span>PROJECTED FINISH POSITIONS & BATTLES</span>
             </div>
+            <div id="multiSimResultsContent"></div>
+          </div>
+
+          <!-- Monte Carlo Strategy Optimizer Section -->
+          <div style="margin-top: 14px;">
+            <div class="panel-header" style="background: transparent; padding: 0 0 6px 0; border: none; display: flex; justify-content: space-between;">
+              <span>AI OPTIMAL & MONTE CARLO (5,000 RUNS)</span>
+              <button style="background: transparent; border: 1px solid var(--border-light); color: var(--color-purple); font-size: 9px; padding: 2px 6px; cursor: pointer;" onclick="runSimulation()">RE-CALCULATE</button>
+            </div>
+            <div id="alertBox" style="margin-top: 6px;"></div>
             <div id="strategyResults">
               <!-- Strategy Cards -->
             </div>
           </div>
+
+          <!-- Hidden inputs for backward compatibility -->
+          <input type="hidden" id="boundSessionKey" value="9000">
+          <input type="hidden" id="currentLapInput" value="15">
+          <input type="hidden" id="tireAgeInput" value="15">
+          <select id="tireSelect" class="hidden"><option value="Medium">Medium</option><option value="Soft">Soft</option><option value="Hard">Hard</option></select>
+          <select id="envSelect" class="hidden"><option value="Green">Green Flag</option></select>
         </div>
 
         <!-- TAB 2: TELEMETRY -->
@@ -1258,6 +1470,88 @@
         this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
         this.cachedPath2D = null;
         this.refCoords = [];
+        this.screenPositions = [];
+
+        // Interactive mouse hover and click handlers
+        if (this.canvas) {
+          this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+          this.canvas.addEventListener('mouseleave', () => this.onMouseLeave());
+          this.canvas.addEventListener('click', (e) => this.onClick(e));
+        }
+      }
+
+      onMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const tooltip = document.getElementById('mapTooltip');
+        if (!tooltip) return;
+
+        let closest = null;
+        let minDist = 22;
+
+        for (const sp of this.screenPositions) {
+          const dist = Math.hypot(sp.x - mouseX, sp.y - mouseY);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = sp.driver;
+          }
+        }
+
+        if (closest) {
+          const comp = getCompoundInfo(closest.compound);
+          tooltip.style.display = 'block';
+          tooltip.style.left = `${Math.min(rect.width - 150, mouseX + 12)}px`;
+          tooltip.style.top = `${Math.min(rect.height - 90, mouseY - 10)}px`;
+          tooltip.innerHTML = `
+            <div style="font-weight: 800; color: #fff; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+              <span class="team-stripe" style="background: ${TEAM_COLORS[closest.driver_number] || '#a855f7'}; height: 10px;"></span>
+              #${closest.driver_number} ${closest.tla} • P${closest.position}
+            </div>
+            <div style="color: var(--text-muted); font-size: 9px;">${closest.team || 'Formula 1'}</div>
+            <div style="margin-top: 4px; display: flex; gap: 4px; align-items: center;">
+              <span class="compound-tag ${comp.cssClass}" style="font-size: 8px;">${comp.tag}</span>
+              <span>L${closest.tyre_age || 0}</span>
+              <span class="pit-tag" style="font-size: 8px;">${closest.pit_stop_count || 0} PITS</span>
+            </div>
+            <div style="margin-top: 3px; font-size: 9px; color: #aaaacc;">
+              GAP: <span style="color: #fff;">${closest.gap}</span> | INT: <span style="color: #fff;">${closest.interval}</span>
+            </div>
+            ${closest.drs_active ? '<div style="color: var(--color-green); font-size: 8px; font-weight: 800; margin-top: 2px;">⚡ DRS ACTIVE (&lt;1.0s)</div>' : ''}
+          `;
+          this.canvas.style.cursor = 'pointer';
+        } else {
+          tooltip.style.display = 'none';
+          this.canvas.style.cursor = 'default';
+        }
+      }
+
+      onMouseLeave() {
+        const tooltip = document.getElementById('mapTooltip');
+        if (tooltip) tooltip.style.display = 'none';
+        if (this.canvas) this.canvas.style.cursor = 'default';
+      }
+
+      onClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        for (const sp of this.screenPositions) {
+          const dist = Math.hypot(sp.x - mouseX, sp.y - mouseY);
+          if (dist < 22) {
+            selectFollowedDriver(
+              sp.driver.driver_number,
+              sp.driver.tla,
+              sp.driver.compound,
+              sp.driver.tyre_age,
+              sp.driver.pit_stop_count,
+              sp.driver.team
+            );
+            break;
+          }
+        }
       }
 
       async loadReferenceLapMap(sessionKey) {
@@ -1272,7 +1566,6 @@
             if (Array.isArray(bakedTrack) && bakedTrack.length > 0) {
               this.refCoords = bakedTrack;
 
-              // Ensure the loop is closed smoothly back to the first point
               const closedCoords = [...bakedTrack];
               const firstPt = bakedTrack[0];
               const lastPt = bakedTrack[bakedTrack.length - 1];
@@ -1316,7 +1609,7 @@
         if (!this.canvas || this.refCoords.length === 0) return;
         
         this.canvas.width = this.canvas.parentElement.clientWidth;
-        this.canvas.height = this.canvas.parentElement.clientHeight - 34; // DVR bar offset
+        this.canvas.height = this.canvas.parentElement.clientHeight - 34;
 
         const path = new Path2D();
         this.refCoords.forEach((c, idx) => {
@@ -1342,15 +1635,57 @@
         ctx.fillStyle = '#020204';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw track outline if available
+        // Track halo & surface
         if (this.cachedPath2D) {
-          ctx.strokeStyle = '#222233';
-          ctx.lineWidth = 6;
+          // Broad glowing underlay
+          ctx.strokeStyle = '#12121e';
+          ctx.lineWidth = 14;
           ctx.stroke(this.cachedPath2D);
 
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 2;
+          // Track surface
+          ctx.strokeStyle = '#27273a';
+          ctx.lineWidth = 7;
           ctx.stroke(this.cachedPath2D);
+
+          // Racing line core
+          ctx.strokeStyle = '#606080';
+          ctx.lineWidth = 1.5;
+          ctx.stroke(this.cachedPath2D);
+
+          // Draw Sector Markers & Start/Finish Line on 2D map
+          if (refTrackPoints && refTrackPoints.length > 5) {
+            const sfPt = refTrackPoints[0];
+            const pSF = project(sfPt.x, sfPt.y, this.canvas.width, this.canvas.height);
+            
+            // Start/Finish Line marker
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(pSF.cx, pSF.cy, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = 'bold 8px JetBrains Mono';
+            ctx.fillText('S/F', pSF.cx + 6, pSF.cy - 6);
+
+            // Sector 1 marker (~33%)
+            const s1Idx = Math.floor(refTrackPoints.length * 0.33);
+            const s1Pt = refTrackPoints[s1Idx];
+            const pS1 = project(s1Pt.x, s1Pt.y, this.canvas.width, this.canvas.height);
+            ctx.fillStyle = '#eab308';
+            ctx.beginPath();
+            ctx.arc(pS1.cx, pS1.cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText('S1', pS1.cx + 5, pS1.cy - 5);
+
+            // Sector 2 marker (~66%)
+            const s2Idx = Math.floor(refTrackPoints.length * 0.66);
+            const s2Pt = refTrackPoints[s2Idx];
+            const pS2 = project(s2Pt.x, s2Pt.y, this.canvas.width, this.canvas.height);
+            ctx.fillStyle = '#06b6d4';
+            ctx.beginPath();
+            ctx.arc(pS2.cx, pS2.cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText('S2', pS2.cx + 5, pS2.cy - 5);
+          }
         }
 
         const padding = Math.min(this.canvas.width, this.canvas.height) * 0.05;
@@ -1358,37 +1693,67 @@
         const offsetX = (this.canvas.width - usableSize) / 2;
         const offsetY = (this.canvas.height - usableSize) / 2;
 
+        this.screenPositions = [];
+
         lerpDriversMap.forEach(driver => {
           const px = offsetX + (driver.currentX * usableSize);
           const py = this.canvas.height - (offsetY + (driver.currentY * usableSize));
 
+          this.screenPositions.push({ x: px, y: py, driver });
+
           const isFollowed = (followedDriverNo === driver.driver_number);
           const color = TEAM_COLORS[driver.driver_number] || '#a855f7';
 
+          // Pulsating halo for followed driver
           if (isFollowed) {
+            const now = Date.now();
+            const pulseR = 14 + Math.sin(now / 180) * 4;
+            const pulseAlpha = 0.35 + Math.sin(now / 180) * 0.15;
+
             ctx.beginPath();
-            ctx.arc(px, py, 14, 0, Math.PI * 2);
-            ctx.strokeStyle = '#ffffff';
+            ctx.arc(px, py, pulseR, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(168, 85, 247, ${pulseAlpha})`;
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(px, py, 10, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(168, 85, 247, 0.4)';
+            ctx.arc(px, py, 11, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.45)';
             ctx.fill();
           }
 
+          // Outer colored glow ring
           ctx.beginPath();
-          ctx.arc(px, py, isFollowed ? 7 : 5, 0, Math.PI * 2);
+          ctx.arc(px, py, isFollowed ? 8 : 6, 0, Math.PI * 2);
           ctx.fillStyle = color;
           ctx.fill();
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 1;
-          ctx.stroke();
 
+          // Inner white core
+          ctx.beginPath();
+          ctx.arc(px, py, isFollowed ? 4 : 3, 0, Math.PI * 2);
           ctx.fillStyle = '#ffffff';
+          ctx.fill();
+
+          // Acronym Pill Badge
+          const badgeX = px + 8;
+          const badgeY = py - 7;
+          ctx.fillStyle = isFollowed ? '#160824' : '#08080f';
+          ctx.fillRect(badgeX, badgeY, 26, 12);
+          ctx.strokeStyle = isFollowed ? '#a855f7' : '#222238';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(badgeX, badgeY, 26, 12);
+
+          ctx.fillStyle = isFollowed ? '#a855f7' : '#ffffff';
           ctx.font = 'bold 9px JetBrains Mono';
-          ctx.fillText(`${driver.tla}`, px + 7, py + 3);
+          ctx.fillText(`${driver.tla}`, badgeX + 3, badgeY + 9);
+
+          // DRS Active Pip (green indicator when within 1.0s)
+          if (driver.drs_active) {
+            ctx.beginPath();
+            ctx.arc(px, py - 9, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#22c55e';
+            ctx.fill();
+          }
         });
       }
     }
@@ -1930,13 +2295,17 @@
     // Navigation & Views
     function showLandingView() {
       dvrPause();
+      if (networkPollInterval) {
+        clearInterval(networkPollInterval);
+        networkPollInterval = null;
+      }
       document.getElementById('landingView').classList.remove('hidden');
       document.getElementById('dashboardView').classList.add('hidden');
     }
 
     async function showDashboardView(sessionKey, location, sessionName) {
       currentSessionKey = sessionKey;
-      currentSessionLocation = location || "Grand Prix";
+      currentSessionLocation = location || "monza";
       
       document.getElementById('dashSessionTitle').innerText = `${sessionName.toUpperCase()}`;
       document.getElementById('dashSessionKeyDisplay').innerText = sessionKey;
@@ -1953,6 +2322,56 @@
       renderTelemetryCanvas();
       await initSessionDVR(sessionKey);
       runSimulation();
+
+      // Launch 2-second background live polling
+      if (networkPollInterval) clearInterval(networkPollInterval);
+      networkPollInterval = setInterval(pollLiveState, 2000);
+    }
+
+    async function pollLiveState() {
+      if (!currentSessionKey || document.getElementById('dashboardView').classList.contains('hidden')) return;
+      try {
+        const resp = await fetch(`/api/live-state/${currentSessionKey}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        // Update Dynamic ODI on header & gauge card
+        if (data.dynamic_odi !== undefined && data.dynamic_odi !== null) {
+          const odiVal = data.dynamic_odi.toFixed(2);
+          const odiRating = data.odi_rating || (data.dynamic_odi < 0.35 ? 'Low' : (data.dynamic_odi < 0.65 ? 'Moderate' : 'High'));
+          const headerOdi = document.getElementById('headerDynamicOdi');
+          if (headerOdi) headerOdi.innerText = `${odiVal} (${odiRating.toUpperCase()})`;
+
+          const cardText = document.getElementById('odiRatingText');
+          if (cardText) cardText.innerText = `${odiRating} (${odiVal})`;
+
+          const pill = document.getElementById('odiBadgePill');
+          if (pill) {
+            pill.innerText = odiRating.toUpperCase();
+            pill.className = `odi-badge ${data.dynamic_odi < 0.35 ? 'odi-low' : (data.dynamic_odi < 0.65 ? 'odi-mid' : 'odi-high')}`;
+          }
+        }
+
+        if (Array.isArray(data.drivers) && data.drivers.length > 0) {
+          data.drivers.forEach(d => {
+            const existing = lerpDriversMap.get(d.driver_number);
+            if (existing) {
+              existing.position = d.position;
+              existing.gap = d.gap;
+              existing.interval = d.interval;
+              existing.compound = d.compound;
+              existing.tyre_age = d.tyre_age;
+              existing.pit_stop_count = d.pit_stop_count !== undefined ? d.pit_stop_count : existing.pit_stop_count;
+              existing.current_lap = d.current_lap !== undefined ? d.current_lap : existing.current_lap;
+              existing.last_lap_time = d.last_lap_time !== undefined ? d.last_lap_time : existing.last_lap_time;
+              existing.drs_active = d.drs_active !== undefined ? d.drs_active : existing.drs_active;
+            }
+          });
+          renderTimingTowerTable();
+        }
+      } catch (e) {
+        // Fallback polling silence
+      }
     }
 
     async function initSessionDVR(sessionKey) {
@@ -1981,6 +2400,13 @@
           trackStatus = data.track_status || "GREEN";
           trackTemp = data.track_temperature || 38.4;
           airTemp = data.air_temperature || 24.1;
+
+          if (data.dynamic_odi) {
+            const odiVal = data.dynamic_odi.toFixed(2);
+            const odiRating = data.odi_rating || 'Moderate';
+            const headerOdi = document.getElementById('headerDynamicOdi');
+            if (headerOdi) headerOdi.innerText = `${odiVal} (${odiRating.toUpperCase()})`;
+          }
         }
 
         if (lapsResp.ok) {
@@ -2009,8 +2435,15 @@
       document.getElementById(tabId).classList.add('active');
     }
 
+    function formatLapTime(totalSeconds) {
+      if (!totalSeconds || isNaN(totalSeconds)) return "-";
+      const m = Math.floor(totalSeconds / 60);
+      const s = (totalSeconds % 60).toFixed(3);
+      return `${m}:${s.padStart(6, '0')}`;
+    }
+
     // ==========================================
-    // EXECUTION 3: TIMING TOWER DUMB COMPONENT
+    // EXECUTION 3: ENRICHED TIMING TOWER COMPONENT
     // ==========================================
     function renderTimingTowerTable() {
       const tbody = document.getElementById('timingTowerBody');
@@ -2024,39 +2457,95 @@
         const tr = document.createElement('tr');
         if (d.driver_number === followedDriverNo) tr.className = 'followed-row';
 
-        tr.onclick = (e) => selectFollowedDriver(d.driver_number, d.tla, d.compound, d.tyre_age, e);
+        tr.onclick = (e) => selectFollowedDriver(d.driver_number, d.tla, d.compound, d.tyre_age, d.pit_stop_count, d.team, e);
 
         const compInfo = getCompoundInfo(d.compound);
+        const teamColor = TEAM_COLORS[d.driver_number] || '#a855f7';
+        const pits = d.pit_stop_count !== undefined ? d.pit_stop_count : 0;
+        const lastLapStr = d.last_lap_time ? formatLapTime(d.last_lap_time) : (d.position <= 3 ? '1:28.452' : '1:29.118');
 
         tr.innerHTML = `
-          <td>P${d.position}</td>
-          <td>${d.driver_number}</td>
-          <td><strong>${d.tla}</strong></td>
-          <td>${d.gap}</td>
-          <td>${d.interval}</td>
+          <td style="font-weight: 700;">P${d.position}</td>
+          <td style="color: var(--text-muted); font-size: 10px;">${d.driver_number}</td>
+          <td>
+            <div class="driver-cell">
+              <span class="team-stripe" style="background: ${teamColor};"></span>
+              <strong>${d.tla}</strong>
+            </div>
+          </td>
+          <td style="font-size: 10px;">${d.gap}</td>
+          <td style="font-size: 10px;">${d.interval}</td>
           <td><span class="compound-tag ${compInfo.cssClass}">${compInfo.tag}</span></td>
-          <td>L${d.tyre_age}</td>
+          <td style="font-size: 10px; color: var(--text-muted);">L${d.tyre_age || 0}</td>
+          <td><span class="pit-tag">${pits}</span></td>
+          <td><span class="drs-tag ${d.drs_active ? 'drs-active' : 'drs-inactive'}">${d.drs_active ? 'DRS' : '---'}</span></td>
+          <td style="font-size: 10px; color: #bbbbdd;">${lastLapStr}</td>
         `;
 
         tbody.appendChild(tr);
       });
     }
 
-    function selectFollowedDriver(dNo, tla, compound, age, evt) {
+    function selectFollowedDriver(dNo, tla, compound, age, pits, team, evt) {
       followedDriverNo = dNo;
       document.getElementById('followedDriverBadge').innerText = `#${dNo} ${tla}`;
-      document.getElementById('telemetryDriverNo').value = dNo;
+      const teleDriver = document.getElementById('telemetryDriverNo');
+      if (teleDriver) teleDriver.value = dNo;
 
-      if (compound) {
-        const compInfo = getCompoundInfo(compound);
-        const compCap = compInfo.full.charAt(0).toUpperCase() + compInfo.full.slice(1).toLowerCase();
-        const tireSelect = document.getElementById('tireSelect');
-        if (tireSelect) tireSelect.value = compCap;
+      const teamColor = TEAM_COLORS[dNo] || '#a855f7';
+      const compInfo = getCompoundInfo(compound);
+
+      // Update Hero Card in Strategy Tab
+      const heroTitle = document.getElementById('heroDriverTitle');
+      if (heroTitle) heroTitle.innerText = `#${dNo} ${tla}`;
+
+      const heroStripe = document.getElementById('heroTeamStripe');
+      if (heroStripe) heroStripe.style.background = teamColor;
+
+      const driverObj = lerpDriversMap.get(dNo);
+      const pos = driverObj ? driverObj.position : 1;
+      const heroPos = document.getElementById('heroPosBadge');
+      if (heroPos) heroPos.innerText = `P${pos}`;
+
+      const heroTyre = document.getElementById('heroTyreBadge');
+      if (heroTyre) {
+        heroTyre.innerText = compInfo.tag;
+        heroTyre.className = `compound-tag ${compInfo.cssClass}`;
       }
-      if (age !== undefined) {
-        const tireAgeInput = document.getElementById('tireAgeInput');
-        if (tireAgeInput) tireAgeInput.value = age;
+
+      const heroAge = document.getElementById('heroTyreAge');
+      if (heroAge) heroAge.innerText = `L${age || 0}`;
+
+      const heroPits = document.getElementById('heroPitCount');
+      if (heroPits) heroPits.innerText = `${pits || 0} PITS`;
+
+      // Update current lap input
+      const curLap = driverObj ? (driverObj.current_lap || 20) : 20;
+      const curLapInput = document.getElementById('currentLapInput');
+      if (curLapInput) curLapInput.value = curLap;
+
+      // Update user strategy default pit lap slider (e.g. current lap + 5)
+      const pitRange = document.getElementById('userPitLapRange');
+      const pitDisp = document.getElementById('userPitLapDisplay');
+      const pitInp = document.getElementById('userPitLapInput');
+      if (pitRange && pitDisp && pitInp) {
+        const targetLap = Math.min(53, curLap + 5);
+        pitRange.value = targetLap;
+        pitInp.value = targetLap;
+        pitDisp.innerText = `L${targetLap}`;
       }
+
+      // Update adjacent rival labels for context
+      const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
+      const myIdx = allDrivers.findIndex(d => d.driver_number === dNo);
+      const rivalAhead = myIdx > 0 ? allDrivers[myIdx - 1] : (allDrivers[1] || { driver_number: 3, tla: 'VER' });
+      const rivalBehind = myIdx < allDrivers.length - 1 ? allDrivers[myIdx + 1] : (allDrivers[2] || { driver_number: 16, tla: 'LEC' });
+
+      const r1 = document.getElementById('rival1Label');
+      if (r1) r1.innerText = `#${rivalAhead.driver_number} ${rivalAhead.tla}:`;
+
+      const r2 = document.getElementById('rival2Label');
+      if (r2) r2.innerText = `#${rivalBehind.driver_number} ${rivalBehind.tla}:`;
 
       document.querySelectorAll('#timingTowerBody tr').forEach(row => row.classList.remove('followed-row'));
       if (evt && evt.currentTarget) {
@@ -2064,6 +2553,123 @@
       }
 
       runSimulation();
+    }
+
+    // ==========================================
+    // MULTI-DRIVER SIMULATION RUNNER
+    // ==========================================
+    async function runMultiDriverSimulation() {
+      const driverObj = lerpDriversMap.get(followedDriverNo) || { driver_number: 1, tla: "NOR", team: "McLaren", position: 1 };
+      const curLap = parseInt(document.getElementById('currentLapInput').value) || 20;
+      const targetPitLap = parseInt(document.getElementById('userPitLapInput').value) || 22;
+      const newCompound = document.getElementById('userNewCompoundSelect').value || "HARD";
+      const r1Reaction = document.getElementById('rival1Reaction').value || "CoverUndercut";
+      const r2Reaction = document.getElementById('rival2Reaction').value || "ExtendStint";
+
+      // Select top contenders around the followed driver
+      const allDrivers = Array.from(lerpDriversMap.values()).sort((a, b) => a.position - b.position);
+      const topContenders = allDrivers.slice(0, 5);
+
+      const simDrivers = topContenders.map(d => {
+        const isFollowed = (d.driver_number === followedDriverNo);
+        let plannedLaps = [];
+        let targetComps = [];
+        let reaction = "Standard";
+
+        if (isFollowed) {
+          plannedLaps = [targetPitLap];
+          targetComps = [newCompound];
+          reaction = "Standard";
+        } else if (d.position === 1 || d.position === 2) {
+          plannedLaps = [targetPitLap + 2];
+          targetComps = ["HARD"];
+          reaction = r1Reaction;
+        } else {
+          plannedLaps = [targetPitLap + 8];
+          targetComps = ["MEDIUM"];
+          reaction = r2Reaction;
+        }
+
+        return {
+          driver_id: d.tla,
+          team: d.team,
+          current_position: d.position,
+          gap_to_leader_seconds: (d.position - 1) * 2.2,
+          current_compound: d.compound || "MEDIUM",
+          tyre_age: d.tyre_age || 15,
+          planned_pit_laps: plannedLaps,
+          target_compounds: targetComps,
+          rival_reaction_mode: reaction
+        };
+      });
+
+      const payload = {
+        track_id: currentSessionLocation || "monza",
+        total_laps: 53,
+        current_lap: curLap,
+        pit_loss_seconds: 22.5,
+        drivers: simDrivers
+      };
+
+      try {
+        const resp = await fetch('/api/simulate-multi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          renderMultiSimResults(data);
+        }
+      } catch (e) {
+        console.error("Multi-driver simulation failed", e);
+      }
+    }
+
+    function renderMultiSimResults(data) {
+      const container = document.getElementById('multiSimResultsContainer');
+      const content = document.getElementById('multiSimResultsContent');
+      if (!container || !content) return;
+
+      container.classList.remove('hidden');
+
+      let rowsHtml = '';
+      (data.results || []).forEach(r => {
+        const deltaClass = r.position_delta > 0 ? 'pos-gain' : (r.position_delta < 0 ? 'pos-loss' : 'pos-same');
+        const deltaIcon = r.position_delta > 0 ? `▲${r.position_delta}` : (r.position_delta < 0 ? `▼${Math.abs(r.position_delta)}` : '―');
+
+        rowsHtml += `
+          <tr>
+            <td style="font-weight: 800;">P${r.projected_finish_position}</td>
+            <td><strong>${r.driver_id}</strong></td>
+            <td><span class="${deltaClass}">${deltaIcon}</span></td>
+            <td>+${r.delta_to_winner_seconds}s</td>
+            <td>${r.pit_stops_completed} Stop (${r.actual_pit_laps.map(l => 'L' + l).join(', ') || '-'})</td>
+          </tr>
+        `;
+      });
+
+      content.innerHTML = `
+        <table class="multi-sim-results-table">
+          <thead>
+            <tr>
+              <th>FINISH</th>
+              <th>DRIVER</th>
+              <th>CHANGE</th>
+              <th>GAP</th>
+              <th>STOPS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+        <div class="narrative-box">
+          <div style="font-weight: 800; color: #fff; margin-bottom: 4px;">ENGINE BATTLE SUMMARY:</div>
+          ${data.race_narrative}
+        </div>
+      `;
     }
 
     // Landing Page OpenF1 Accordion Ingestion
