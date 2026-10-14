@@ -76,7 +76,8 @@ fn test_monte_carlo_10k_benchmark() {
     println!("\n⏱️ [BENCHMARK] 10,000 Monte Carlo simulations completed in: {:?}", duration);
     println!("📊 Expected: {}s, P10: {}s, P90: {}s, Win%: {}%\n",
         metrics.expected_time_seconds, metrics.p10_time_seconds, metrics.p90_time_seconds, metrics.win_probability_pct);
-
-    assert!(duration.as_millis() < 100, "Should take under 100ms! Took {:?}", duration);
+    let threshold_ms = if cfg!(debug_assertions) { 300 } else { 50 };
+    assert!(duration.as_millis() < threshold_ms, "Should take under {}ms! Took {:?}", threshold_ms, duration);
 }
+
 

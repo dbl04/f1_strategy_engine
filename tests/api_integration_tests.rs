@@ -187,3 +187,46 @@ async fn test_live_state_endpoint() {
     assert!(first.current_lap > 0);
 }
 
+#[tokio::test]
+async fn test_simulate_driver_strategy_endpoint() {
+    let app = create_router();
+
+    let req = f1_strategy_engine::engine::driver_sim::DriverSimulationRequest {
+        session_key: 9000,
+        driver_number: 1,
+        pit_lap: 22,
+        new_compound: f1_strategy_engine::domain::TireCompound::Hard,
+        current_lap: 18,
+        track_id: Some("monza".to_string()),
+        target_rival_number: Some(3),
+    };
+
+    let payload = serde_json::to_string(&req).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/strategy/simulate-driver")
+                .header("content-type", "application/json")
+                .body(Body::from(payload))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let result: f1_strategy_engine::engine::driver_sim::DriverSimulationResponse =
+        serde_json::from_slice(&body).unwrap();
+    assert_eq!(result.driver_tla, "NOR");
+    assert_eq!(result.teammate_tla, "PIA");
+    assert!(result.projected_finish_position >= 1);
+    assert!(!result.traffic_risk.is_empty());
+    assert!(result.monte_carlo_metrics.win_probability_pct > 0.0);
+}
+
+

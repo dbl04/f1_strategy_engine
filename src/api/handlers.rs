@@ -170,3 +170,20 @@ pub async fn simulate_multi_driver(
     Json(response)
 }
 
+/// Simulates a single driver's strategy hypothesis including pit window traffic, dynamic ODI, and Monte Carlo risk.
+#[utoipa::path(
+    post,
+    path = "/api/strategy/simulate-driver",
+    request_body = crate::engine::driver_sim::DriverSimulationRequest,
+    responses(
+        (status = 200, description = "Interactive single-driver strategy simulation response", body = crate::engine::driver_sim::DriverSimulationResponse)
+    )
+)]
+pub async fn simulate_driver_strategy_handler(
+    Json(payload): Json<crate::engine::driver_sim::DriverSimulationRequest>,
+) -> Json<crate::engine::driver_sim::DriverSimulationResponse> {
+    let response = crate::engine::driver_sim::simulate_driver_strategy(&payload);
+    Json(response)
+}
+
+

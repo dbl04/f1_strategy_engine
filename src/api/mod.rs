@@ -21,6 +21,7 @@ use crate::domain::{
     paths(
         handlers::simulate_race,
         handlers::simulate_multi_driver,
+        handlers::simulate_driver_strategy_handler,
         handlers::get_tracks,
         handlers::get_circuit_geometry,
         tracks::get_circuit_geometry_by_id,
@@ -55,6 +56,8 @@ use crate::domain::{
         CircuitInfo,
         WeatherState,
         WeatherForecast,
+        crate::engine::driver_sim::DriverSimulationRequest,
+        crate::engine::driver_sim::DriverSimulationResponse,
         crate::engine::multi_driver::MultiDriverSimRequest,
         crate::engine::multi_driver::MultiDriverSimResponse,
         crate::engine::multi_driver::DriverStrategyInput,
@@ -89,6 +92,10 @@ pub fn create_router() -> Router {
         .route("/api/tracks", get(handlers::get_tracks))
         .route("/simulate", post(handlers::simulate_race))
         .route("/api/simulate-multi", post(handlers::simulate_multi_driver))
+        .route(
+            "/api/strategy/simulate-driver",
+            post(handlers::simulate_driver_strategy_handler),
+        )
         .route("/api/circuit-geometry", get(handlers::get_circuit_geometry))
         .route(
             "/api/circuit-geometry/{track_id}",
